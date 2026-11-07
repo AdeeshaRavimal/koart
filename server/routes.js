@@ -1064,6 +1064,137 @@ async function handleApiRequest(req, res, url, body) {
     });
   }
 
+  // --------------------------------------------------------------------------
+  // ALL-IN-ONE MULTI-COMPANY NOTIFICATION RADAR (Cross-Company Task & Schedule Alerts)
+  // --------------------------------------------------------------------------
+  if (method === 'GET' && pathname === '/api/notifications/all-companies') {
+    const ownerComps = userCompanies.length > 0 ? userCompanies : db.data.companies;
+    const compMap = {};
+    ownerComps.forEach(c => { compMap[c.id] = c; });
+
+    const nowMs = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const sevenDaysMs = 7 * oneDayMs;
+
+    const ownerJobs = (db.data.jobs || []).filter(j => Boolean(compMap[j.company_id]));
+
+    let overdueCount = 0;
+    let dueTodayCount = 0;
+    let upcomingWeekCount = 0;
+    let scheduledFutureCount = 0;
+    let openCount = 0;
+    let completedCount = 0;
+
+    const items = ownerJobs.map(j => {
+      const comp = compMap[j.company_id] || { name: 'Workspace', currency_code: 'LKR', category: '' };
+      const emp = (db.data.employees || []).find(e => e.id === j.employee_id) || {
+        full_name: 'Unassigned',
+        role_title: 'Staff',
+        whatsapp_number: ''
+      };
+
+      const dueMs = new Date(j.current_due_date).getTime();
+      const diffMs = dueMs - nowMs;
+      const isClosed = j.status === 'completed' || j.status === 'stopped';
+
+      let category = 'completed';
+      let urgencyRank = 5;
+      let timeLabel = 'Completed';
+      let badgeClass = 'chip-green';
+
+      if (!isClosed) {
+        openCount++;
+        if (diffMs < 0) {
+          category = 'overdue';
+          urgencyRank = 1;
+          overdueCount++;
+          badgeClass = 'chip-red';
+          const absHours = Math.max(1, Math.floor(Math.abs(diffMs) / (1000 * 60 * 60)));
+          const days = Math.floor(absHours / 24);
+          const remHours = absHours % 24;
+          timeLabel = days > 0 ? `🚨 ${days}d ${remHours}h overdue` : `🚨 ${absHours}h overdue`;
+        } else if (diffMs <= oneDayMs) {
+          category = 'due_today';
+          urgencyRank = 2;
+          dueTodayCount++;
+          badgeClass = 'chip-amber';
+          const hoursLeft = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60)));
+          timeLabel = `⏰ Due in ${hoursLeft}h`;
+        } else if (diffMs <= sevenDaysMs) {
+          category = 'upcoming_week';
+          urgencyRank = 3;
+          upcomingWeekCount++;
+          badgeClass = 'chip-blue';
+          const daysLeft = Math.ceil(diffMs / oneDayMs);
+          timeLabel = `📅 Due in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`;
+        } else {
+          category = 'scheduled_future';
+          urgencyRank = 4;
+          scheduledFutureCount++;
+          badgeClass = 'chip-muted';
+          const daysLeft = Math.ceil(diffMs / oneDayMs);
+          timeLabel = `🗓️ Scheduled in ${daysLeft} days`;
+        }
+      } else {
+        if (j.status === 'completed') completedCount++;
+        category = 'completed';
+        urgencyRank = 6;
+        badgeClass = j.status === 'completed' ? 'chip-green' : 'chip-red';
+        timeLabel = j.status === 'completed' ? '✓ Completed' : '🛑 Stopped';
+      }
+
+      return {
+        id: j.id,
+        jobCode: j.job_code,
+        title: j.title,
+        description: j.description || '',
+        priority: j.priority || 'medium',
+        status: j.status,
+        statedValue: Number(j.stated_value || 0),
+        realizedValue: Number(j.realized_value || 0),
+        currentDueDate: j.current_due_date,
+        createdAt: j.created_at,
+        companyId: comp.id,
+        companyName: comp.name,
+        companyCategory: comp.category || '',
+        currency: comp.currency_code || 'LKR',
+        employeeId: emp.id || j.employee_id,
+        employeeName: emp.full_name,
+        employeeRole: emp.role_title,
+        employeePhone: emp.whatsapp_number,
+        category,
+        urgencyRank,
+        timeLabel,
+        badgeClass
+      };
+    }).sort((a, b) => {
+      if (a.urgencyRank !== b.urgencyRank) return a.urgencyRank - b.urgencyRank;
+      return new Date(a.currentDueDate).getTime() - new Date(b.currentDueDate).getTime();
+    });
+
+    return jsonResponse(res, 200, {
+      success: true,
+      counts: {
+        totalWorkspaces: ownerComps.length,
+        totalOpen: openCount,
+        urgentActionable: overdueCount + dueTodayCount,
+        overdue: overdueCount,
+        dueToday: dueTodayCount,
+        upcomingWeek: upcomingWeekCount,
+        scheduledFuture: scheduledFutureCount,
+        completed: completedCount,
+        totalAll: items.length
+      },
+      companies: ownerComps.map(c => ({
+        id: c.id,
+        name: c.name,
+        currency: c.currency_code || 'LKR',
+        category: c.category || ''
+      })),
+      items
+    });
+  }
+
   if (method === 'GET' && pathname === '/api/analytics/kpis') {
     const jobs = db.getJobs(activeCompanyId);
     const employees = db.getEmployees(activeCompanyId);

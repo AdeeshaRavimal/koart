@@ -2216,3 +2216,154 @@
         font-size: 11px;
       }
     }
+
+    /* =========================================================================
+       ALL-IN-ONE MULTI-COMPANY NOTIFICATION RADAR & ALERT BAR
+       ========================================================================= */
+    .btn-notif-bell {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-notif-bell:hover {
+      border-color: var(--red);
+      background: rgba(219, 0, 49, 0.08);
+    }
+
+    .btn-notif-bell.has-urgent {
+      border-color: rgba(239, 68, 68, 0.55);
+      background: rgba(239, 68, 68, 0.1);
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+    }
+
+    .notif-badge-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--red);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .notif-badge-count.calm {
+      background: #2563eb;
+    }
+
+    .notif-filter-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .notif-tab-pill {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .notif-tab-pill:hover {
+      border-color: var(--text-dim);
+      color: var(--text-main);
+    }
+
+    .notif-tab-pill.active {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+    }
+
+    .notif-card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 56vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .notif-item-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-left: 3px solid var(--border-color);
+      border-radius: 8px;
+      padding: 11px 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      transition: all 0.15s ease;
+    }
+
+    .notif-item-card:hover {
+      border-color: rgba(219, 0, 49, 0.35);
+      background: var(--bg-card);
+    }
+
+    .notif-item-card.cat-overdue {
+      border-left-color: #ef4444;
+      background: rgba(239, 68, 68, 0.04);
+    }
+
+    .notif-item-card.cat-due_today {
+      border-left-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.04);
+    }
+
+    .notif-item-card.cat-upcoming_week {
+      border-left-color: #3b82f6;
+    }
+
+    .notif-item-card.cat-scheduled_future {
+      border-left-color: #8b5cf6;
+    }
+
+    .notif-comp-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(219, 0, 49, 0.12);
+      border: 1px solid rgba(219, 0, 49, 0.3);
+      color: var(--text-main);
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    @media screen and (max-width: 640px) {
+      .notif-label-text {
+        display: none;
+      }
+      .notif-item-card {
+        flex-direction: column;
+      }
+    }

@@ -15,8 +15,8 @@
     href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/platform.css?v=20261107-5" />
-  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-5" />
+  <link rel="stylesheet" href="/css/platform.css?v=20261107-6" />
+  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-6" />
 </head>
 
 <body class="theme-dark">
@@ -79,8 +79,14 @@
         </button>
       </nav>
 
-      <!-- Right: Action CTA, Theme & User Profile Menu -->
+      <!-- Right: Action CTA, All-Companies Notification Bell, Theme & User Profile Menu -->
       <div class="nav-actions-right">
+        <button class="btn-notif-bell" onclick="openAllCompaniesNotificationModal()" id="btn-notif-radar"
+          title="All-In-One Multi-Company Task & Schedule Notification Radar">
+          <span>🔔</span>
+          <span class="notif-label-text">All Alerts</span>
+          <span class="notif-badge-count calm" id="nav-notif-badge">0</span>
+        </button>
         <button class="btn-theme-toggle" onclick="toggleTheme()" id="btn-theme-toggle"
           title="Switch Theme (Dark / Light)">
           <span id="theme-toggle-icon">🌙</span>
@@ -152,16 +158,17 @@
        ========================================================================= -->
   <main class="platform-container">
 
-    <!-- OVERDUE ALERT BANNER (If tasks delayed) -->
+    <!-- ALL-COMPANIES SMART NOTIFICATION BAR (Overdue, Due Today, Upcoming & Scheduled Tasks) -->
     <div class="overdue-alert-banner" id="overdue-banner" style="display: none;">
-      <div>
-        <strong>🚨 Immediate Management Intervention Required:</strong>
-        <span id="overdue-banner-text" style="font-size: 12.5px; margin-left: 5px;">0 operational tasks have exceeded
-          deadline SLAs.</span>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <strong id="overdue-banner-title">🔔 All-Companies Radar:</strong>
+        <span id="overdue-banner-text" style="font-size: 12.5px;">0 operational tasks require attention across your workspaces.</span>
       </div>
-      <button class="btn-sm btn-wa" onclick="filterOverdueJobs()">
-        Review Overdue Pathways ➔
-      </button>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button class="btn-sm btn-action-primary" style="padding: 5px 11px; font-size: 11.5px;" onclick="openAllCompaniesNotificationModal()">
+          🔔 Open All-Companies Notification Panel ➔
+        </button>
+      </div>
     </div>
 
     <!-- =======================================================================
@@ -1636,9 +1643,90 @@
   </div>
 
   <!-- =========================================================================
+       MODAL 9: ALL-IN-ONE MULTI-COMPANY NOTIFICATION & SCHEDULE RADAR
+       ========================================================================= -->
+  <div class="modal-overlay" id="modal-all-notifications">
+    <div class="modal-box" style="max-width: 760px;">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title"><span>🔔</span> All-Companies Notification &amp; Schedule Radar</h3>
+          <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 2px;">
+            Cross-company task alerts — Overdue, Due Today, Next 7 Days &amp; Future Scheduled Tasks across all workspaces
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="closeModal('modal-all-notifications')">✕</button>
+      </div>
+
+      <!-- Cross-Company Summary KPI Strip -->
+      <div
+        style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; background: var(--bg-card); padding: 10px; border: 1px solid var(--border-color); border-radius: 8px;">
+        <div style="text-align: center; padding: 4px; border-right: 1px solid var(--border-subtle);">
+          <div style="font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); text-transform: uppercase;">🚨 Overdue</div>
+          <div style="font-size: 18px; font-weight: 800; color: var(--red); font-family: var(--font-display);" id="notif-kpi-overdue">0</div>
+        </div>
+        <div style="text-align: center; padding: 4px; border-right: 1px solid var(--border-subtle);">
+          <div style="font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); text-transform: uppercase;">⏰ Due Today (24h)</div>
+          <div style="font-size: 18px; font-weight: 800; color: #f59e0b; font-family: var(--font-display);" id="notif-kpi-today">0</div>
+        </div>
+        <div style="text-align: center; padding: 4px; border-right: 1px solid var(--border-subtle);">
+          <div style="font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); text-transform: uppercase;">📅 Next 7 Days</div>
+          <div style="font-size: 18px; font-weight: 800; color: #3b82f6; font-family: var(--font-display);" id="notif-kpi-week">0</div>
+        </div>
+        <div style="text-align: center; padding: 4px;">
+          <div style="font-size: 10px; color: var(--text-dim); font-family: var(--font-mono); text-transform: uppercase;">🗓️ Future Scheduled</div>
+          <div style="font-size: 18px; font-weight: 800; color: #a855f7; font-family: var(--font-display);" id="notif-kpi-future">0</div>
+        </div>
+      </div>
+
+      <!-- Filter Tabs & Workspace Filter -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+        <div class="notif-filter-tabs" style="margin-bottom: 0;">
+          <button type="button" class="notif-tab-pill active" id="notif-tab-open" onclick="setNotifFilterCategory('open')">
+            ⚡ All Open (<span id="notif-cnt-open">0</span>)
+          </button>
+          <button type="button" class="notif-tab-pill" id="notif-tab-overdue" onclick="setNotifFilterCategory('overdue')">
+            🚨 Overdue (<span id="notif-cnt-overdue">0</span>)
+          </button>
+          <button type="button" class="notif-tab-pill" id="notif-tab-due_today" onclick="setNotifFilterCategory('due_today')">
+            ⏰ Due Today (<span id="notif-cnt-today">0</span>)
+          </button>
+          <button type="button" class="notif-tab-pill" id="notif-tab-upcoming_week" onclick="setNotifFilterCategory('upcoming_week')">
+            📅 Next 7 Days (<span id="notif-cnt-week">0</span>)
+          </button>
+          <button type="button" class="notif-tab-pill" id="notif-tab-scheduled_future" onclick="setNotifFilterCategory('scheduled_future')">
+            🗓️ Future / Month+ (<span id="notif-cnt-future">0</span>)
+          </button>
+          <button type="button" class="notif-tab-pill" id="notif-tab-all" onclick="setNotifFilterCategory('all')">
+            📋 All Tasks (<span id="notif-cnt-all">0</span>)
+          </button>
+        </div>
+
+        <select id="notif-company-filter" class="form-control" style="width: 175px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="renderAllCompaniesNotificationItems()">
+          <option value="">🏢 All Companies</option>
+        </select>
+      </div>
+
+      <!-- Notification Cards List -->
+      <div class="notif-card-list" id="notif-items-container">
+        <div style="text-align: center; padding: 30px; color: var(--text-dim);">Loading cross-company notifications...</div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+        <span style="font-size: 11px; color: var(--text-dim);" id="notif-footer-summary">
+          Monitoring all registered workspaces in real time.
+        </span>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-sm" onclick="loadAllCompaniesNotifications(true)">🔄 Refresh</button>
+          <button type="button" class="btn-action-primary" onclick="closeModal('modal-all-notifications')">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
        FRONTEND CLIENT SCRIPT (API Integration, State & Reactivity)
        ========================================================================= -->
-  <script src="/js/platform-app.js?v=20261107-5"></script>
+  <script src="/js/platform-app.js?v=20261107-6"></script>
 </body>
 
 </html>

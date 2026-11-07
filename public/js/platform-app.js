@@ -519,15 +519,10 @@
         document.getElementById('kpi-overdue-count').textContent = k.overdueCount;
         document.getElementById('kpi-active-tasks-sub').textContent = `${k.activeTasksCount} operational jobs in progress`;
         document.getElementById('kpi-completed-tasks-sub').textContent = `${k.completedCount} total jobs completed`;
-
-        const banner = document.getElementById('overdue-banner');
-        if (k.overdueCount > 0) {
-          banner.style.display = 'flex';
-          document.getElementById('overdue-banner-text').textContent = `${k.overdueCount} operational task(s) currently exceed deadline SLAs.`;
-        } else {
-          banner.style.display = 'none';
-        }
       }
+
+      // Refresh All-Companies Notification Radar (Bell + Top Smart Alert Bar)
+      loadAllCompaniesNotifications();
 
       // Recent jobs table
       const jobsRes = await apiRequest('/api/jobs');
@@ -2281,6 +2276,253 @@
         }
       };
       reader.readAsText(file);
+    }
+
+    // ------------------------------------------------------------------------
+    // FEATURE 6: ALL-IN-ONE MULTI-COMPANY NOTIFICATION & SCHEDULE RADAR
+    // ------------------------------------------------------------------------
+    const notifState = {
+      activeCategory: 'open',
+      companyId: '',
+      data: null
+    };
+
+    async function loadAllCompaniesNotifications(forceRenderModal = false) {
+      const res = await apiRequest('/api/notifications/all-companies');
+      if (!res || !res.success) return;
+
+      notifState.data = res;
+      const c = res.counts || {};
+
+      // 1. Update Top Navigation Bell Badge
+      const badgeEl = document.getElementById('nav-notif-badge');
+      const bellBtn = document.getElementById('btn-notif-radar');
+      const totalOpen = c.totalOpen || 0;
+      const urgentCount = (c.overdue || 0) + (c.dueToday || 0);
+
+      if (badgeEl) {
+        badgeEl.textContent = totalOpen;
+        badgeEl.classList.toggle('calm', urgentCount === 0);
+      }
+      if (bellBtn) {
+        bellBtn.classList.toggle('has-urgent', urgentCount > 0);
+      }
+
+      // 2. Update Top Smart Notification Bar (#overdue-banner) Across ALL Companies
+      const banner = document.getElementById('overdue-banner');
+      const bannerTitle = document.getElementById('overdue-banner-title');
+      const bannerText = document.getElementById('overdue-banner-text');
+
+      if (banner && bannerText) {
+        if ((c.overdue || 0) > 0 || (c.dueToday || 0) > 0 || (c.upcomingWeek || 0) > 0 || (c.scheduledFuture || 0) > 0) {
+          banner.style.display = 'flex';
+          const parts = [];
+          if (c.overdue > 0) parts.push(`🚨 ${c.overdue} Overdue`);
+          if (c.dueToday > 0) parts.push(`⏰ ${c.dueToday} Due Today`);
+          if (c.upcomingWeek > 0) parts.push(`📅 ${c.upcomingWeek} Due This Week`);
+          if (c.scheduledFuture > 0) parts.push(`🗓️ ${c.scheduledFuture} Scheduled Ahead`);
+
+          if (bannerTitle) {
+            bannerTitle.textContent = c.overdue > 0
+              ? '🚨 All-Companies Alert:'
+              : '🔔 All-Companies Schedule Radar:';
+          }
+          bannerText.textContent = `${parts.join(' · ')} across your ${c.totalWorkspaces || 1} workspace(s).`;
+        } else {
+          banner.style.display = 'none';
+        }
+      }
+
+      // 3. Populate Modal KPIs & Counters
+      const setTxt = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      };
+      setTxt('notif-kpi-overdue', c.overdue || 0);
+      setTxt('notif-kpi-today', c.dueToday || 0);
+      setTxt('notif-kpi-week', c.upcomingWeek || 0);
+      setTxt('notif-kpi-future', c.scheduledFuture || 0);
+
+      setTxt('notif-cnt-open', c.totalOpen || 0);
+      setTxt('notif-cnt-overdue', c.overdue || 0);
+      setTxt('notif-cnt-today', c.dueToday || 0);
+      setTxt('notif-cnt-week', c.upcomingWeek || 0);
+      setTxt('notif-cnt-future', c.scheduledFuture || 0);
+      setTxt('notif-cnt-all', c.totalAll || 0);
+
+      // Populate company filter dropdown inside notification modal
+      const compSelect = document.getElementById('notif-company-filter');
+      if (compSelect && Array.isArray(res.companies)) {
+        const curVal = compSelect.value;
+        compSelect.innerHTML = '<option value="">🏢 All Companies (' + res.companies.length + ')</option>' +
+          res.companies.map(comp => `<option value="${comp.id}">${comp.name} (${comp.currency})</option>`).join('');
+        if (curVal && res.companies.some(x => x.id === curVal)) {
+          compSelect.value = curVal;
+        }
+      }
+
+      const modalEl = document.getElementById('modal-all-notifications');
+      if (forceRenderModal || (modalEl && modalEl.classList.contains('active'))) {
+        renderAllCompaniesNotificationItems();
+      }
+    }
+
+    async function openAllCompaniesNotificationModal(initialCategory = null) {
+      openModal('modal-all-notifications');
+      await loadAllCompaniesNotifications(false);
+      let targetCat = initialCategory || notifState.activeCategory || 'open';
+      if (!initialCategory && notifState.data && notifState.data.counts) {
+        const cnt = notifState.data.counts;
+        if ((cnt.totalOpen || 0) === 0 && (cnt.totalAll || 0) > 0) {
+          targetCat = 'all';
+        } else if ((cnt.totalOpen || 0) > 0 && targetCat === 'all') {
+          targetCat = 'open';
+        }
+      }
+      setNotifFilterCategory(targetCat);
+    }
+
+    function setNotifFilterCategory(cat) {
+      notifState.activeCategory = cat;
+      ['open', 'overdue', 'due_today', 'upcoming_week', 'scheduled_future', 'all'].forEach(k => {
+        const btn = document.getElementById(`notif-tab-${k}`);
+        if (btn) btn.classList.toggle('active', k === cat);
+      });
+      renderAllCompaniesNotificationItems();
+    }
+
+    function renderAllCompaniesNotificationItems() {
+      const container = document.getElementById('notif-items-container');
+      if (!container) return;
+
+      const data = notifState.data;
+      if (!data || !Array.isArray(data.items)) {
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-dim);">No notifications available.</div>';
+        return;
+      }
+
+      const compFilterEl = document.getElementById('notif-company-filter');
+      const selectedCompId = compFilterEl ? compFilterEl.value : '';
+      const cat = notifState.activeCategory || 'open';
+
+      const filtered = data.items.filter(item => {
+        if (selectedCompId && item.companyId !== selectedCompId) return false;
+        if (cat === 'open') return item.category !== 'completed';
+        if (cat === 'all') return true;
+        return item.category === cat;
+      });
+
+      const footerEl = document.getElementById('notif-footer-summary');
+      if (footerEl) {
+        footerEl.textContent = `Showing ${filtered.length} task(s) across ${selectedCompId ? 'selected workspace' : (data.counts.totalWorkspaces + ' workspaces')}.`;
+      }
+
+      if (!filtered.length) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 36px 20px; color: var(--text-muted); background: var(--bg-surface); border: 1px dashed var(--border-color); border-radius: 8px;">
+            <div style="font-size: 22px; margin-bottom: 6px;">✨</div>
+            <div style="font-weight: 700; font-size: 14px; color: var(--text-main);">All Clear in This View!</div>
+            <div style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">
+              ${cat === 'open'
+                ? 'You have zero overdue or pending scheduled tasks across your companies right now. Click "📋 All Tasks" above to view completed tasks.'
+                : 'No tasks match this filter category right now.'}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const isCurrentWs = item.companyId === state.activeCompanyId;
+        const prioChip = item.priority === 'urgent' ? 'chip-red' : (item.priority === 'high' ? 'chip-amber' : 'chip-blue');
+        return `
+          <div class="notif-item-card cat-${item.category}">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 5px;">
+                <span class="notif-comp-tag" title="Workspace: ${item.companyName}">
+                  🏢 ${item.companyName} (${item.currency})${isCurrentWs ? ' · ACTIVE' : ''}
+                </span>
+                <span style="font-family: var(--font-mono); font-size: 11px; font-weight: 800; color: var(--red);">
+                  #${item.jobCode}
+                </span>
+                <span class="chip ${item.badgeClass}" style="font-size: 10px; padding: 2px 7px;">
+                  ${item.timeLabel}
+                </span>
+                <span class="chip ${prioChip}" style="font-size: 9.5px; padding: 1px 6px;">
+                  ${item.priority.toUpperCase()}
+                </span>
+              </div>
+
+              <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main); margin-bottom: 3px;">
+                ${item.title}
+              </div>
+
+              <div style="font-size: 11.5px; color: var(--text-dim); display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                <span>👤 <strong>${item.employeeName}</strong> (${item.employeeRole || 'Staff'})</span>
+                <span>📅 Due: <strong style="color: var(--text-main);">${formatDate(item.currentDueDate)}</strong></span>
+                <span style="font-family: var(--font-mono); color: var(--emerald); font-weight: 700;">
+                  💰 ${formatLKR(item.statedValue, item.currency)}
+                </span>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 5px; flex-wrap: wrap; align-items: center; justify-content: flex-end;">
+              <button type="button" class="btn-sm btn-status-quick" onclick="notifOpenJobStatus('${item.companyId}', '${item.id}')" title="Change Status or Update Job Price">
+                ⚡ Status &amp; Price
+              </button>
+              <button type="button" class="btn-sm btn-wa" onclick="notifSendWaRemind('${item.companyId}', '${item.id}')" title="Send 1-Click WhatsApp Reminder">
+                💬 Remind
+              </button>
+              ${item.category !== 'completed' ? `
+                <button type="button" class="btn-sm" onclick="notifOpenJobPathways('${item.companyId}', '${item.id}')" title="Extend, Reassign, Stop, or Complete">
+                  ⚖️ Pathways
+                </button>
+              ` : ''}
+              ${!isCurrentWs ? `
+                <button type="button" class="btn-sm" onclick="notifSwitchToCompany('${item.companyId}')" title="Switch to ${item.companyName} Workspace">
+                  ➔ Switch Co.
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function notifSwitchToCompany(companyId) {
+      closeModal('modal-all-notifications');
+      if (state.activeCompanyId !== companyId) {
+        state.activeCompanyId = companyId;
+        await initPlatform();
+      }
+      switchTab('jobs');
+    }
+
+    async function notifOpenJobStatus(companyId, jobId) {
+      closeModal('modal-all-notifications');
+      if (state.activeCompanyId !== companyId) {
+        state.activeCompanyId = companyId;
+        await initPlatform();
+      }
+      await openChangeStatusModal(jobId);
+    }
+
+    async function notifOpenJobPathways(companyId, jobId) {
+      closeModal('modal-all-notifications');
+      if (state.activeCompanyId !== companyId) {
+        state.activeCompanyId = companyId;
+        await initPlatform();
+      }
+      await openOverdueModal(jobId);
+    }
+
+    async function notifSendWaRemind(companyId, jobId) {
+      closeModal('modal-all-notifications');
+      if (state.activeCompanyId !== companyId) {
+        state.activeCompanyId = companyId;
+        await initPlatform();
+      }
+      await triggerFollowup(jobId);
     }
 
     // Initialize on window load
