@@ -180,22 +180,6 @@
       document.getElementById('tier-radio-individual').checked = (tier === 'individual');
     }
 
-    function quickFillDirectorAuth() {
-      document.getElementById('login-email').value = 'director@koart.lk';
-      document.getElementById('login-password').value = 'admin123';
-      handleLogin(new Event('submit'));
-    }
-
-    function quickFillAdeeshaAuth() {
-      document.getElementById('login-email').value = 'kannangaraadeesha@gmail.com';
-      document.getElementById('login-password').value = '#Ravi12@';
-      handleLogin(new Event('submit'));
-    }
-
-    function quickFillDemoAuth() {
-      quickFillDirectorAuth();
-    }
-
     async function handleLogin(e) {
       if (e && e.preventDefault) e.preventDefault();
       const email = document.getElementById('login-email').value.trim();
@@ -217,7 +201,6 @@
         if (errBox) {
           errBox.innerHTML = `⚠️ ${res.error || 'Invalid email or password.'}
           <div style="margin-top:6px; font-size:11px; display:flex; gap:12px; align-items:center;">
-            <a href="javascript:void(0)" onclick="quickFillAdeeshaAuth()" style="color:#60a5fa; text-decoration:underline; font-weight:600;">⚡ Quick Login as Adeesha</a>
             <a href="javascript:void(0)" onclick="openResetPasswordPrompt()" style="color:#f87171; text-decoration:underline;">🔑 Reset Password</a>
           </div>`;
           errBox.style.display = 'block';
@@ -226,10 +209,16 @@
     }
 
     async function openResetPasswordPrompt() {
-      const email = document.getElementById('login-email').value.trim() || 'kannangaraadeesha@gmail.com';
-      const newPass = prompt(`Enter new password for ${email}:`, '#Ravi12@');
+      const email = document.getElementById('login-email').value.trim();
+      if (!email) {
+        alert('Please enter your email address first.');
+        return;
+      }
+      const currentPassword = prompt(`Enter your CURRENT password for ${email}:`);
+      if (!currentPassword) return;
+      const newPass = prompt('Enter your NEW password (minimum 6 characters):');
       if (!newPass) return;
-      const res = await apiRequest('/api/auth/reset-password', 'POST', { email, newPassword: newPass });
+      const res = await apiRequest('/api/auth/reset-password', 'POST', { email, currentPassword, newPassword: newPass });
       if (res.success) {
         alert('✓ Password updated successfully! Signing you in now...');
         document.getElementById('login-email').value = email;
