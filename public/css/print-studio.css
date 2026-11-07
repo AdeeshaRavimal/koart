@@ -1,0 +1,545 @@
+/* =========================================================================
+   KOart Studio — Standalone Executive PDF Publisher Stylesheet
+   ========================================================================= */
+    * {
+      box-sizing: border-box !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #0f172a;
+      color: #0f172a;
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-size: 8pt;
+      line-height: 1.35;
+    }
+
+    /* Top Floating Print Studio Toolbar (Never Printed) */
+    .print-studio-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      background: #090b10;
+      color: #ffffff;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.5);
+      border-bottom: 1.5px solid rgba(219, 0, 49, 0.4);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .print-studio-toolbar .btn-print-primary {
+      background: #db0031;
+      color: #ffffff;
+      border: 1px solid #ff2b5e;
+      border-radius: 6px;
+      padding: 9px 22px;
+      font-weight: 700;
+      font-size: 13.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(219, 0, 49, 0.35);
+      transition: all 0.2s ease;
+    }
+    .print-studio-toolbar .btn-print-primary:hover {
+      background: #b80028;
+      transform: translateY(-1px);
+    }
+    .print-studio-toolbar .btn-ctrl {
+      background: rgba(255,255,255,0.08);
+      color: #e2e8f0;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .print-studio-toolbar .btn-ctrl:hover {
+      background: rgba(255,255,255,0.18);
+    }
+
+    /* Paper Page Container */
+    .print-paper-container {
+      width: ${isLandscape ? '297mm' : '210mm'};
+      margin: 25px auto;
+      box-shadow: 0 15px 50px rgba(0,0,0,0.6);
+      background: #ffffff;
+      border-radius: 0;
+      overflow: hidden;
+    }
+
+    @media print {
+      .print-studio-toolbar { display: none !important; }
+      html, body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: ${isLandscape ? '297mm' : '210mm'} !important;
+      }
+      .print-paper-container {
+        width: 100% !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+    }
+
+    /* COVER PAGE STYLES */
+    .pdf-cover-page {
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      width: 100% !important;
+      min-height: ${isLandscape ? '210mm' : '297mm'} !important;
+      box-sizing: border-box !important;
+      padding: 24mm 22mm !important;
+      page-break-after: always !important;
+      break-after: page !important;
+      position: relative !important;
+    }
+    .pdf-cover-page.theme-white {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      border-top: 6px solid #db0031 !important;
+    }
+    .pdf-cover-page.theme-dark {
+      background: radial-gradient(circle at 85% 15%, rgba(219, 0, 49, 0.28), transparent 45%), #090b10 !important;
+      color: #ffffff !important;
+    }
+    .cover-top-brand {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      border-bottom: 2px solid #db0031 !important;
+      padding-bottom: 12px !important;
+      margin-bottom: 20px !important;
+    }
+    .cover-logo {
+      font-family: 'Bricolage Grotesque', sans-serif !important;
+      font-size: 24px !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.02em !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+    }
+    .cover-logo .dot { color: #db0031 !important; }
+    .theme-white .cover-logo { color: #0f172a !important; }
+    .theme-dark .cover-logo { color: #ffffff !important; }
+
+    .cover-badge {
+      font-family: 'Space Mono', monospace !important;
+      font-size: 9.5px !important;
+      font-weight: 700 !important;
+      padding: 4px 10px !important;
+      border-radius: 4px !important;
+      letter-spacing: 0.08em !important;
+    }
+    .theme-white .cover-badge {
+      color: #db0031 !important;
+      background: rgba(219, 0, 49, 0.08) !important;
+      border: 1px solid rgba(219, 0, 49, 0.25) !important;
+    }
+    .theme-dark .cover-badge {
+      color: #f87171 !important;
+      background: rgba(219, 0, 49, 0.2) !important;
+      border: 1px solid rgba(219, 0, 49, 0.4) !important;
+    }
+
+    .cover-hero { margin: 35px 0 30px !important; }
+    .cover-kicker {
+      font-family: 'Space Mono', monospace !important;
+      font-size: 10px !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.12em !important;
+      text-transform: uppercase !important;
+      color: #db0031 !important;
+      margin-bottom: 10px !important;
+    }
+    .cover-title {
+      font-family: 'Bricolage Grotesque', sans-serif !important;
+      font-size: 34px !important;
+      line-height: 1.1 !important;
+      font-weight: 800 !important;
+      letter-spacing: -0.02em !important;
+      text-transform: uppercase !important;
+      margin: 0 0 16px 0 !important;
+    }
+    .theme-white .cover-title { color: #0f172a !important; }
+    .theme-dark .cover-title { color: #ffffff !important; }
+    .cover-title-accent { color: #db0031 !important; }
+
+    .cover-desc {
+      font-size: 13px !important;
+      line-height: 1.55 !important;
+      max-width: 680px !important;
+    }
+    .theme-white .cover-desc { color: #475569 !important; }
+    .theme-dark .cover-desc { color: #94a3b8 !important; }
+
+    .cover-meta-grid {
+      display: grid !important;
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 12px !important;
+      margin-bottom: 22px !important;
+    }
+    .cover-meta-item {
+      padding: 11px 15px !important;
+      border-radius: 4px !important;
+    }
+    .theme-white .cover-meta-item {
+      background: #f8fafc !important;
+      border: 1px solid #cbd5e1 !important;
+    }
+    .theme-dark .cover-meta-item {
+      background: rgba(255, 255, 255, 0.05) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    .cover-meta-item .lbl {
+      font-family: 'Space Mono', monospace !important;
+      font-size: 8px !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.08em !important;
+      font-weight: 700 !important;
+      margin-bottom: 4px !important;
+    }
+    .theme-white .cover-meta-item .lbl { color: #64748b !important; }
+    .theme-dark .cover-meta-item .lbl { color: #94a3b8 !important; }
+
+    .cover-meta-item .val {
+      font-weight: 800 !important;
+      font-size: 13.5px !important;
+    }
+    .theme-white .cover-meta-item .val { color: #0f172a !important; }
+    .theme-dark .cover-meta-item .val { color: #ffffff !important; }
+
+    .cover-meta-item .sub {
+      font-size: 10.5px !important;
+      margin-top: 2px !important;
+    }
+    .theme-white .cover-meta-item .sub { color: #64748b !important; }
+    .theme-dark .cover-meta-item .sub { color: #94a3b8 !important; }
+
+    .cover-toc-card {
+      padding: 16px 20px !important;
+      border-radius: 4px !important;
+      margin-bottom: 22px !important;
+    }
+    .theme-white .cover-toc-card {
+      background: #f8fafc !important;
+      border: 1px solid #cbd5e1 !important;
+    }
+    .theme-dark .cover-toc-card {
+      background: rgba(0, 0, 0, 0.45) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+    .cover-toc-title {
+      font-family: 'Space Mono', monospace !important;
+      font-size: 9.5px !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.1em !important;
+      text-transform: uppercase !important;
+      color: #db0031 !important;
+      margin-bottom: 10px !important;
+    }
+    .cover-toc-item {
+      display: flex !important;
+      justify-content: space-between !important;
+      font-size: 10.5px !important;
+      padding: 4px 0 !important;
+      border-bottom: 1px dashed rgba(100, 116, 139, 0.2) !important;
+    }
+    .theme-white .cover-toc-item { color: #334155 !important; }
+    .theme-dark .cover-toc-item { color: #cbd5e1 !important; }
+
+    .cover-bottom-stamp {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      border-top: 1px solid #cbd5e1 !important;
+      padding-top: 14px !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 8.5px !important;
+    }
+    .theme-white .cover-bottom-stamp { color: #64748b !important; }
+    .theme-dark .cover-bottom-stamp {
+      border-top-color: rgba(255, 255, 255, 0.15) !important;
+      color: #94a3b8 !important;
+    }
+
+    /* DOCUMENT CONTENT SHEET STYLES */
+    .doc-page-sheet {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      padding: 14mm 16mm 12mm 16mm !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+      min-height: ${isLandscape ? '210mm' : '297mm'} !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+    }
+    .doc-main-flow {
+      flex: 1 0 auto !important;
+    }
+    .doc-bottom-flow {
+      flex-shrink: 0 !important;
+      margin-top: 20px !important;
+    }
+    .doc-running-header {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      border-bottom: 2px solid #db0031 !important;
+      padding-bottom: 6px !important;
+      margin-bottom: 12px !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 8pt !important;
+      color: #64748b !important;
+    }
+    .doc-running-header .brand-lead {
+      color: #0f172a !important;
+      font-weight: 800 !important;
+    }
+    .doc-running-header .dot { color: #db0031 !important; }
+
+    .doc-running-footer {
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      border-top: 1px solid #cbd5e1 !important;
+      padding-top: 6px !important;
+      margin-top: 16px !important;
+      font-family: 'Space Mono', monospace !important;
+      font-size: 7.2pt !important;
+      color: #64748b !important;
+    }
+
+    /* KPI SCORECARD GRID (COMPACT, NO MULTI-LINE WRAP) */
+    .doc-page-sheet .kpi-grid {
+      display: grid !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      gap: 8px !important;
+      margin-bottom: 14px !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .doc-page-sheet .kpi-card {
+      background: #f8fafc !important;
+      border: 1px solid #cbd5e1 !important;
+      border-top: 3px solid #db0031 !important;
+      padding: 7px 9px !important;
+      border-radius: 4px !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      min-height: 64px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+    }
+    .doc-page-sheet .kpi-label {
+      font-family: 'Space Mono', monospace !important;
+      font-size: 6.8pt !important;
+      font-weight: 700 !important;
+      color: #64748b !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.05em !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+    .doc-page-sheet .kpi-value {
+      font-size: 13pt !important;
+      font-weight: 800 !important;
+      color: #0f172a !important;
+      margin-top: 2px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      line-height: 1.15 !important;
+    }
+    .doc-page-sheet .kpi-value.green { color: #059669 !important; }
+    .doc-page-sheet .kpi-value.blue { color: #2563eb !important; }
+    .doc-page-sheet .kpi-value.red { color: #db0031 !important; }
+
+    .kpi-card-sub {
+      font-size: 6.8pt !important;
+      color: #64748b !important;
+      margin-top: 3px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+
+    .doc-meter {
+      background: #e2e8f0 !important;
+      height: 3.5px !important;
+      border-radius: 999px !important;
+      overflow: hidden !important;
+      margin-top: 4px !important;
+    }
+    .doc-meter .bar {
+      height: 100% !important;
+      background: #db0031 !important;
+      border-radius: 999px !important;
+    }
+    .doc-meter.green .bar { background: #059669 !important; }
+    .doc-meter.blue .bar { background: #2563eb !important; }
+
+    /* DOCUMENT TABLES (FIXED PROPORTIONS - NEVER CLIPPED) */
+    .table-responsive { width: 100% !important; overflow: visible !important; }
+    .data-table {
+      width: 100% !important;
+      table-layout: fixed !important;
+      border-collapse: collapse !important;
+      margin-bottom: 12px !important;
+      font-size: 7.5pt !important;
+    }
+    .data-table thead { display: table-header-group !important; }
+    .data-table thead th {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+      font-weight: 800 !important;
+      border-top: 1px solid #cbd5e1 !important;
+      border-bottom: 2px solid #db0031 !important;
+      padding: 6px 6px !important;
+      font-size: 7.2pt !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.03em !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      word-break: normal !important;
+    }
+    .data-table tbody tr {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .data-table tbody td {
+      border-bottom: 1px solid #e2e8f0 !important;
+      padding: 5px 6px !important;
+      color: #1e293b !important;
+      background: #ffffff !important;
+      font-size: 7.5pt !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+    .data-table tbody tr:nth-child(even) td {
+      background: #f8fafc !important;
+    }
+
+    /* BADGES & CHIPS */
+    .chip {
+      display: inline-block !important;
+      padding: 1.5px 5px !important;
+      border-radius: 2.5px !important;
+      font-size: 6.8pt !important;
+      font-weight: 700 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.04em !important;
+      white-space: nowrap !important;
+    }
+    .chip-green { background: #dcfce7 !important; color: #15803d !important; border: 1px solid #86efac !important; }
+    .chip-blue { background: #dbeafe !important; color: #1d4ed8 !important; border: 1px solid #93c5fd !important; }
+    .chip-yellow { background: #fef9c3 !important; color: #854d0e !important; border: 1px solid #fde047 !important; }
+    .chip-red { background: #fee2e2 !important; color: #b91c1c !important; border: 1px solid #fca5a5 !important; }
+    .chip-muted { background: #f1f5f9 !important; color: #475569 !important; border: 1px solid #cbd5e1 !important; }
+
+    /* SECTION HEADINGS IN DOSSIER */
+    .doc-section-heading {
+      font-family: 'Bricolage Grotesque', sans-serif !important;
+      font-size: 11.5pt !important;
+      font-weight: 800 !important;
+      text-transform: uppercase !important;
+      letter-spacing: -0.01em !important;
+      color: #0f172a !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      margin: 18px 0 8px !important;
+      padding-bottom: 4px !important;
+      border-bottom: 1.5px solid #cbd5e1 !important;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+    }
+    .doc-section-heading .badge {
+      background: #db0031 !important;
+      color: #ffffff !important;
+      font-size: 7pt !important;
+      font-weight: 800 !important;
+      padding: 2px 5px !important;
+      border-radius: 3px !important;
+      letter-spacing: 0.05em !important;
+    }
+
+    /* EXECUTIVE SIGNOFF BLOCK (3 BALANCED CARDS) */
+    .exec-signoff-block {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      gap: 10px !important;
+      padding-top: 12px !important;
+      border-top: 2px solid #db0031 !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .signoff-box {
+      border: 1px solid #cbd5e1 !important;
+      background: #f8fafc !important;
+      padding: 8px 12px !important;
+      border-radius: 4px !important;
+      min-height: 68px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+    }
+    .signoff-role {
+      font-family: 'Space Mono', monospace !important;
+      font-size: 6.8pt !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.06em !important;
+      color: #64748b !important;
+      margin-bottom: 3px !important;
+    }
+    .signoff-name {
+      font-weight: 800 !important;
+      font-size: 9.5pt !important;
+      color: #0f172a !important;
+      margin-bottom: 8px !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+    }
+    .signoff-line {
+      border-top: 1px solid #cbd5e1 !important;
+      padding-top: 4px !important;
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      font-size: 7pt !important;
+      color: #64748b !important;
+      font-family: 'Space Mono', monospace !important;
+    }
+    .signoff-badge {
+      font-family: 'Space Mono', monospace !important;
+      font-size: 6.5pt !important;
+      font-weight: 700 !important;
+      padding: 1.5px 5px !important;
+      border-radius: 3px !important;
+      background: #e2e8f0 !important;
+      color: #334155 !important;
+      white-space: nowrap !important;
+    }
+    .signoff-badge.verified {
+      background: #dcfce7 !important;
+      color: #15803d !important;
+      border: 1px solid #86efac !important;
+    }

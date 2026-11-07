@@ -1049,11 +1049,22 @@ async function handleApiRequest(req, res, url, body) {
         return errorResponse(res, 400, 'Invalid backup structure: required tables (users, companies, employees, jobs) are missing.');
       }
 
-      // Create safety backup file
-      const dbPath = path.resolve(__dirname, 'data', 'platform-db.json');
+      // Create safety backup file and auto-prune old .bak files (keep latest 3)
+      const dataDir = path.resolve(__dirname, 'data');
+      const dbPath = path.join(dataDir, 'platform-db.json');
       if (fs.existsSync(dbPath)) {
-        const bakPath = path.resolve(__dirname, 'data', `platform-db.json.bak-${Date.now()}`);
+        const bakPath = path.join(dataDir, `platform-db.json.bak-${Date.now()}`);
         fs.copyFileSync(dbPath, bakPath);
+
+        try {
+          const bakFiles = fs.readdirSync(dataDir)
+            .filter(f => f.startsWith('platform-db.json.bak-'))
+            .sort()
+            .reverse();
+          bakFiles.slice(3).forEach(oldBak => {
+            try { fs.unlinkSync(path.join(dataDir, oldBak)); } catch (e) {}
+          });
+        } catch (e) {}
       }
 
       // Restore data and persist
