@@ -51,6 +51,16 @@
       "contact_phone": "+94773587393",
       "onboarding_completed": true,
       "created_at": "2026-11-07T05:07:37.933Z"
+    },
+    {
+      "id": "dce5c458-fc41-480a-88f8-baedb7e0109a",
+      "owner_id": "usr_1794023579341",
+      "name": "Apex new",
+      "category": "DIgital Solution d",
+      "currency_code": "LKR",
+      "contact_phone": "+94773587393",
+      "onboarding_completed": true,
+      "created_at": "2026-11-07T18:08:51.725Z"
     }
   ],
   "employees": [
@@ -82,7 +92,23 @@
       "role_title": "desigener",
       "whatsapp_number": "1299394443",
       "is_active": true,
-      "created_at": "2026-11-07T06:38:38.140Z"
+      "created_at": "2026-11-07T06:38:38.140Z",
+      "is_shared": true,
+      "shared_scope": "selected",
+      "shared_company_ids": [
+        "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+        "dce5c458-fc41-480a-88f8-baedb7e0109a"
+      ]
+    },
+    {
+      "id": "42fe55a4-c573-4537-9ffc-d2fc97ad46cb",
+      "company_id": "dce5c458-fc41-480a-88f8-baedb7e0109a",
+      "employee_code": "EMP-01",
+      "full_name": "sunimal",
+      "role_title": "Sys handler",
+      "whatsapp_number": "+94773587393",
+      "is_active": true,
+      "created_at": "2026-11-07T18:08:51.727Z"
     }
   ],
   "jobs": [
