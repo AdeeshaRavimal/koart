@@ -552,7 +552,11 @@ function generateReports(rawDb, companyId, options = {}) {
  */
 function toCsvLine(cells = []) {
   return cells.map(cell => {
-    const str = cell === null || cell === undefined ? '' : String(cell);
+    let str = cell === null || cell === undefined ? '' : String(cell);
+    // Neutralize CSV / Excel formula injection on untrusted text cells
+    if (/^[=+\-@]/.test(str) && isNaN(Number(str))) {
+      str = "'" + str;
+    }
     if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
       return `"${str.replace(/"/g, '""')}"`;
     }

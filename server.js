@@ -29,17 +29,33 @@ const MIME_TYPES = {
 };
 
 function serveStatic(req, res, pathname) {
-  let safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
+  let decodedPath = '/';
+  try {
+    decodedPath = decodeURIComponent(pathname || '/');
+  } catch (e) {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('400 Bad Request');
+    return;
+  }
+
+  let safePath = path.normalize(decodedPath).replace(/^(\.\.[/\\])+/, '');
   if (safePath === '/' || safePath === '\\') {
     safePath = '/index.html';
   }
 
-  let filePath = path.join(PUBLIC_DIR, safePath);
+  let filePath = path.resolve(PUBLIC_DIR, '.' + (safePath.startsWith('/') || safePath.startsWith('\\') ? safePath : '/' + safePath));
+
+  // Strict directory traversal boundary check
+  if (!filePath.startsWith(PUBLIC_DIR)) {
+    res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('403 Forbidden');
+    return;
+  }
 
   // If path has no extension and file does not exist, fallback to SPA index.html
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     const indexPath = path.join(filePath, 'index.html');
-    if (fs.existsSync(indexPath)) {
+    if (indexPath.startsWith(PUBLIC_DIR) && fs.existsSync(indexPath)) {
       filePath = indexPath;
     } else {
       // SPA Fallback
@@ -60,12 +76,15 @@ function serveStatic(req, res, pathname) {
     const content = fs.readFileSync(filePath);
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': ['.html', '.css', '.js'].includes(ext) ? 'no-cache' : 'public, max-age=86400'
+      'Cache-Control': ['.html', '.css', '.js'].includes(ext) ? 'no-cache' : 'public, max-age=86400',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'Referrer-Policy': 'strict-origin-when-cross-origin'
     });
     res.end(content);
   } catch (err) {
     res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-    res.end('500 Internal Server Error: ' + err.message);
+    res.end('500 Internal Server Error');
   }
 }
 

@@ -19,12 +19,43 @@ const {
   buildWhatsAppReassign
 } = require('./whatsapp');
 
+function hashPassword(plainText) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derived = crypto.scryptSync(String(plainText), salt, 64).toString('hex');
+  return `scrypt$${salt}$${derived}`;
+}
+
+function verifyPassword(plainText, storedHash) {
+  const input = String(plainText || '');
+  const stored = String(storedHash || '');
+  if (!input || !stored) return false;
+
+  if (stored.startsWith('scrypt$')) {
+    const parts = stored.split('$');
+    if (parts.length !== 3) return false;
+    const [, salt, hashHex] = parts;
+    const derived = crypto.scryptSync(input, salt, 64);
+    const expected = Buffer.from(hashHex, 'hex');
+    if (derived.length !== expected.length) return false;
+    return crypto.timingSafeEqual(derived, expected);
+  }
+
+  // Backward-compatible exact check for legacy plaintext entries before auto-upgrade
+  const a = Buffer.from(input, 'utf8');
+  const b = Buffer.from(stored, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 function jsonResponse(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-company-id, x-user-id'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-company-id, x-user-id',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   });
   res.end(JSON.stringify(data));
 }
@@ -55,11 +86,17 @@ async function handleApiRequest(req, res, url, body) {
   };
 
   const userCompanies = db.getCompaniesByOwner(currentUser.id);
+  const ownerCompanyIds = new Set(userCompanies.map(c => c.id));
+  const ownsCompany = (compId) => Boolean(compId && ownerCompanyIds.has(compId));
+  const ownsJob = (job) => Boolean(job && ownsCompany(job.company_id));
+
   const headerCompanyId = req.headers['x-company-id'];
-  const targetCompany = headerCompanyId ? db.data.companies.find(c => c.id === headerCompanyId) : null;
+  const targetCompany = headerCompanyId
+    ? userCompanies.find(c => c.id === headerCompanyId)
+    : null;
   const activeCompanyId = targetCompany
     ? targetCompany.id
-    : (userCompanies[0] ? userCompanies[0].id : (db.data.companies[0] ? db.data.companies[0].id : null));
+    : (userCompanies[0] ? userCompanies[0].id : null);
 
   // --------------------------------------------------------------------------
   // AUTH ENDPOINTS
@@ -69,6 +106,9 @@ async function handleApiRequest(req, res, url, body) {
       const { fullName, email, password, accountType } = body || {};
       if (!fullName || !email || !password) {
         return errorResponse(res, 400, 'Full name, email, and password are required.');
+      }
+      if (String(password).trim().length < 6) {
+        return errorResponse(res, 400, 'Password must be at least 6 characters.');
       }
 
       const existing = db.data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -81,9 +121,9 @@ async function handleApiRequest(req, res, url, body) {
 
       const newUser = {
         id: 'usr_' + Date.now(),
-        full_name: fullName,
-        email: email.toLowerCase(),
-        password_hash: password,
+        full_name: String(fullName).trim(),
+        email: String(email).trim().toLowerCase(),
+        password_hash: hashPassword(String(password).trim()),
         account_type: type,
         max_companies: maxCompanies,
         is_active: true,
@@ -114,37 +154,19 @@ async function handleApiRequest(req, res, url, body) {
     const cleanPass = (password || '').trim();
     const user = db.data.users.find(u => (u.email || '').trim().toLowerCase() === cleanEmail);
     if (!user) {
-      return errorResponse(res, 401, 'Invalid email address. User account not found.');
-    }
-
-    const storedPass = (user.password_hash || '').trim();
-    const isExact = storedPass === cleanPass;
-    const isCaseInsensitive = storedPass.toLowerCase() === cleanPass.toLowerCase();
-    const isAdeeshaMaster = cleanEmail === 'kannangaraadeesha@gmail.com' && (
-      cleanPass === '#Ravi12@' ||
-      cleanPass === '#ravi12@' ||
-      cleanPass === 'Ravi12@' ||
-      cleanPass === '#Ravi12' ||
-      cleanPass === 'admin123' ||
-      cleanPass === 'admin' ||
-      cleanPass === 'ravi12' ||
-      cleanPass.length >= 4
-    );
-    const isDirectorMaster = cleanEmail === 'director@koart.lk' && (
-      cleanPass === 'admin123' ||
-      cleanPass === 'admin' ||
-      cleanPass === 'director123' ||
-      cleanPass === 'director' ||
-      cleanPass.length >= 4
-    );
-
-    if (!isExact && !isCaseInsensitive && !isAdeeshaMaster && !isDirectorMaster) {
       return errorResponse(res, 401, 'Invalid email or password.');
     }
 
-    // Persist active password update for seamless session continuity
-    if ((isAdeeshaMaster || isDirectorMaster) && cleanPass && cleanPass !== storedPass) {
-      user.password_hash = cleanPass;
+    const storedPass = (user.password_hash || '').trim();
+    const isValid = verifyPassword(cleanPass, storedPass);
+
+    if (!isValid) {
+      return errorResponse(res, 401, 'Invalid email or password.');
+    }
+
+    // Automatically upgrade legacy plaintext password to salted scrypt hash on login
+    if (!storedPass.startsWith('scrypt$')) {
+      user.password_hash = hashPassword(cleanPass);
       try { db.save(); } catch (e) {}
     }
 
@@ -161,17 +183,24 @@ async function handleApiRequest(req, res, url, body) {
   }
 
   if (method === 'POST' && pathname === '/api/auth/reset-password') {
-    const { email, newPassword } = body || {};
+    const { email, currentPassword, newPassword } = body || {};
     const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanPass = (newPassword || '').trim();
-    if (!cleanEmail || !cleanPass) {
-      return errorResponse(res, 400, 'Email and new password are required.');
+    const cleanNewPass = (newPassword || '').trim();
+    if (!cleanEmail || !cleanNewPass || cleanNewPass.length < 6) {
+      return errorResponse(res, 400, 'Email and a new password of at least 6 characters are required.');
     }
     const user = db.data.users.find(u => (u.email || '').trim().toLowerCase() === cleanEmail);
     if (!user) {
       return errorResponse(res, 404, 'No account found with this email.');
     }
-    user.password_hash = cleanPass;
+
+    const isAuthenticatedSelf = Boolean(headerUserId && headerUserId === user.id);
+    const isVerifiedCurrent = Boolean(currentPassword && verifyPassword(String(currentPassword).trim(), user.password_hash));
+    if (!isAuthenticatedSelf && !isVerifiedCurrent) {
+      return errorResponse(res, 403, 'Current password verification or active authenticated session is required to change password.');
+    }
+
+    user.password_hash = hashPassword(cleanNewPass);
     db.save();
     return jsonResponse(res, 200, {
       success: true,
@@ -567,7 +596,7 @@ async function handleApiRequest(req, res, url, body) {
     try {
       const empId = matchEmpUpdate[1];
       const emp = db.data.employees.find(e => e.id === empId);
-      if (!emp) return errorResponse(res, 404, 'Employee not found.');
+      if (!emp || !ownsCompany(emp.company_id)) return errorResponse(res, 404, 'Employee not found.');
 
       const { fullName, roleTitle, whatsappNumber, isActive, isShared, sharedScope, sharedCompanyIds } = body || {};
       if (fullName !== undefined && String(fullName).trim()) emp.full_name = String(fullName).trim();
@@ -765,7 +794,7 @@ async function handleApiRequest(req, res, url, body) {
       const { handlerNote, newStatus } = body || {};
 
       const job = db.getJobById(jobId);
-      if (!job) return errorResponse(res, 404, 'Job not found.');
+      if (!job || !ownsJob(job)) return errorResponse(res, 404, 'Job not found.');
 
       const emp = db.data.employees.find(e => e.id === job.employee_id);
       const comp = db.data.companies.find(c => c.id === job.company_id) || { name: 'KOart Platform' };
@@ -800,6 +829,8 @@ async function handleApiRequest(req, res, url, body) {
   if ((method === 'POST' || method === 'PATCH' || method === 'PUT') && matchExtend) {
     try {
       const jobId = matchExtend[1];
+      const existingJob = db.getJobById(jobId);
+      if (!existingJob || !ownsJob(existingJob)) return errorResponse(res, 404, 'Job not found.');
       const { newDueDate, delayFault, reason } = body || {};
       if (!newDueDate) return errorResponse(res, 400, 'New due date is required.');
 
@@ -836,6 +867,8 @@ async function handleApiRequest(req, res, url, body) {
   if ((method === 'POST' || method === 'PATCH' || method === 'PUT') && matchStop) {
     try {
       const jobId = matchStop[1];
+      const existingJob = db.getJobById(jobId);
+      if (!existingJob || !ownsJob(existingJob)) return errorResponse(res, 404, 'Job not found.');
       const { stopCategory, reason, retainValue } = body || {};
 
       const updatedJob = db.stopJob(jobId, {
@@ -871,11 +904,13 @@ async function handleApiRequest(req, res, url, body) {
   if ((method === 'POST' || method === 'PATCH' || method === 'PUT') && matchReassign) {
     try {
       const jobId = matchReassign[1];
+      const existingJob = db.getJobById(jobId);
+      if (!existingJob || !ownsJob(existingJob)) return errorResponse(res, 404, 'Job not found.');
       const { newEmployeeId, handlerNote } = body || {};
       if (!newEmployeeId) return errorResponse(res, 400, 'New employee assignment is required.');
 
       const newEmp = db.data.employees.find(e => e.id === newEmployeeId);
-      if (!newEmp) return errorResponse(res, 404, 'Selected employee not found.');
+      if (!newEmp || !ownsCompany(newEmp.company_id)) return errorResponse(res, 404, 'Selected employee not found.');
 
       const updatedJob = db.reassignJob(jobId, { newEmployeeId, handlerNote });
       const comp = db.data.companies.find(c => c.id === updatedJob.company_id) || { name: 'KOart Platform' };
@@ -908,7 +943,7 @@ async function handleApiRequest(req, res, url, body) {
       const { handlerNote, statedValue, realizedValue } = body || {};
 
       const job = db.getJobById(jobId);
-      if (!job) return errorResponse(res, 404, 'Job not found');
+      if (!job || !ownsJob(job)) return errorResponse(res, 404, 'Job not found');
 
       const oldStated = Number(job.stated_value || 0);
       if (statedValue !== undefined && statedValue !== null && statedValue !== '' && !isNaN(Number(statedValue))) {
@@ -954,7 +989,7 @@ async function handleApiRequest(req, res, url, body) {
       if (!targetStatus) return errorResponse(res, 400, 'Status is required.');
 
       const job = db.getJobById(jobId);
-      if (!job) return errorResponse(res, 404, 'Job not found');
+      if (!job || !ownsJob(job)) return errorResponse(res, 404, 'Job not found');
       const oldStated = Number(job.stated_value || 0);
 
       if (statedValue !== undefined && statedValue !== null && statedValue !== '' && !isNaN(Number(statedValue))) {
@@ -1005,7 +1040,7 @@ async function handleApiRequest(req, res, url, body) {
       const realizedValue = body ? body.realizedValue : undefined;
 
       const job = db.getJobById(jobId);
-      if (!job) return errorResponse(res, 404, 'Job not found');
+      if (!job || !ownsJob(job)) return errorResponse(res, 404, 'Job not found');
       const oldStated = Number(job.stated_value || 0);
 
       if (targetStatus) {
