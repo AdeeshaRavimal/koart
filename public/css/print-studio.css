@@ -70,12 +70,15 @@
 
     /* Paper Page Container */
     .print-paper-container {
-      width: ${isLandscape ? '297mm' : '210mm'};
+      width: 210mm;
       margin: 25px auto;
       box-shadow: 0 15px 50px rgba(0,0,0,0.6);
       background: #ffffff;
       border-radius: 0;
       overflow: hidden;
+    }
+    body.is-landscape .print-paper-container {
+      width: 297mm;
     }
 
     @media print {
@@ -84,7 +87,10 @@
         background: #ffffff !important;
         margin: 0 !important;
         padding: 0 !important;
-        width: ${isLandscape ? '297mm' : '210mm'} !important;
+        width: 210mm !important;
+      }
+      body.is-landscape {
+        width: 297mm !important;
       }
       .print-paper-container {
         width: 100% !important;
@@ -100,12 +106,15 @@
       flex-direction: column !important;
       justify-content: space-between !important;
       width: 100% !important;
-      min-height: ${isLandscape ? '210mm' : '297mm'} !important;
+      min-height: 297mm !important;
       box-sizing: border-box !important;
       padding: 24mm 22mm !important;
       page-break-after: always !important;
       break-after: page !important;
       position: relative !important;
+    }
+    body.is-landscape .pdf-cover-page {
+      min-height: 210mm !important;
     }
     .pdf-cover-page.theme-white {
       background: #ffffff !important;
@@ -284,10 +293,13 @@
       padding: 14mm 16mm 12mm 16mm !important;
       box-sizing: border-box !important;
       width: 100% !important;
-      min-height: ${isLandscape ? '210mm' : '297mm'} !important;
+      min-height: 297mm !important;
       display: flex !important;
       flex-direction: column !important;
       justify-content: space-between !important;
+    }
+    body.is-landscape .doc-page-sheet {
+      min-height: 210mm !important;
     }
     .doc-main-flow {
       flex: 1 0 auto !important;
