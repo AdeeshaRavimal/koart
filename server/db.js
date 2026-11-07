@@ -338,8 +338,8 @@ class PlatformDatabase {
     return job;
   }
 
-  // Direct Status Transition
-  updateJobStatus(jobId, { newStatus, handlerNote }) {
+  // Direct Status Transition (with optional Job Cost / Valuation revision)
+  updateJobStatus(jobId, { newStatus, handlerNote, statedValue, realizedValue }) {
     const job = this.getJobById(jobId);
     if (!job) throw new Error('Job not found');
 
@@ -349,11 +349,25 @@ class PlatformDatabase {
     }
 
     const oldStatus = job.status;
+    const oldStated = Number(job.stated_value || 0);
+    const oldRealized = Number(job.realized_value || 0);
+
     job.status = newStatus;
+
+    // Update stated cost if provided
+    if (statedValue !== undefined && statedValue !== null && statedValue !== '' && !isNaN(Number(statedValue))) {
+      job.stated_value = Math.max(0, Number(statedValue));
+    }
 
     if (newStatus === 'completed') {
       if (!job.completed_at) job.completed_at = new Date().toISOString();
-      job.realized_value = job.stated_value;
+      if (realizedValue !== undefined && realizedValue !== null && realizedValue !== '' && !isNaN(Number(realizedValue))) {
+        job.realized_value = Math.max(0, Number(realizedValue));
+      } else {
+        job.realized_value = job.stated_value;
+      }
+    } else if (realizedValue !== undefined && realizedValue !== null && realizedValue !== '' && !isNaN(Number(realizedValue))) {
+      job.realized_value = Math.max(0, Number(realizedValue));
     } else if (oldStatus === 'completed' && newStatus !== 'completed') {
       job.completed_at = null;
       job.realized_value = 0.00;
@@ -369,12 +383,17 @@ class PlatformDatabase {
       job.stop_reason = null;
     }
 
+    const priceChanged = oldStated !== Number(job.stated_value || 0) || (newStatus === 'completed' && oldRealized !== Number(job.realized_value || 0) && Number(job.realized_value) !== oldStated);
+    const priceNote = priceChanged
+      ? ` [Job Cost: ${oldStated.toLocaleString()} → ${Number(job.stated_value).toLocaleString()}${newStatus === 'completed' ? ` | Realized: ${Number(job.realized_value).toLocaleString()}` : ''}]`
+      : '';
+
     this.addAuditLog({
       job_id: job.id,
       company_id: job.company_id,
       action_type: 'status_change',
       delay_fault: 'none',
-      handler_note: handlerNote || `Status changed from ${oldStatus} to ${newStatus}.`,
+      handler_note: (handlerNote || `Status changed from ${oldStatus} to ${newStatus}.`) + priceNote,
       wa_payload: `Status updated: ${newStatus}`
     });
 
@@ -382,21 +401,35 @@ class PlatformDatabase {
     return job;
   }
 
-  // Pathway 4: Complete Job
-  completeJob(jobId, { handlerNote }) {
+  // Pathway 4: Complete Job (with optional Job Cost / Valuation revision)
+  completeJob(jobId, { handlerNote, statedValue, realizedValue }) {
     const job = this.getJobById(jobId);
     if (!job) throw new Error('Job not found');
 
+    const oldStated = Number(job.stated_value || 0);
+    if (statedValue !== undefined && statedValue !== null && statedValue !== '' && !isNaN(Number(statedValue))) {
+      job.stated_value = Math.max(0, Number(statedValue));
+    }
+
     job.status = 'completed';
     job.completed_at = new Date().toISOString();
-    job.realized_value = job.stated_value;
+    if (realizedValue !== undefined && realizedValue !== null && realizedValue !== '' && !isNaN(Number(realizedValue))) {
+      job.realized_value = Math.max(0, Number(realizedValue));
+    } else {
+      job.realized_value = job.stated_value;
+    }
+
+    const priceChanged = oldStated !== Number(job.stated_value || 0) || Number(job.realized_value) !== oldStated;
+    const priceNote = priceChanged
+      ? ` [Job Cost: ${oldStated.toLocaleString()} → ${Number(job.stated_value).toLocaleString()} | Realized: ${Number(job.realized_value).toLocaleString()}]`
+      : '';
 
     this.addAuditLog({
       job_id: job.id,
       company_id: job.company_id,
       action_type: 'status_change',
       delay_fault: 'none',
-      handler_note: handlerNote || 'Marked completed.',
+      handler_note: (handlerNote || 'Marked completed.') + priceNote,
       wa_payload: `Job #${job.job_code} delivered successfully.`
     });
 

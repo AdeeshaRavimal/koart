@@ -15,8 +15,8 @@
     href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/platform.css?v=20261107-4" />
-  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-4" />
+  <link rel="stylesheet" href="/css/platform.css?v=20261107-5" />
+  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-5" />
 </head>
 
 <body class="theme-dark">
@@ -1090,6 +1090,14 @@
       <!-- PATHWAY 4: MARK COMPLETED -->
       <form id="form-pathway-4" onsubmit="handleCompleteJob(event)" style="display: none;">
         <div class="form-group">
+          <label class="form-label">Final Job Cost / Realized Price</label>
+          <input type="number" class="form-control" id="pw4-job-val" min="0" step="100"
+            placeholder="Enter final agreed job price..." />
+          <span style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px; display: block;">
+            Pre-filled with original stated price. Change this if the final job cost changed.
+          </span>
+        </div>
+        <div class="form-group">
           <label class="form-label">Delivery Note</label>
           <textarea class="form-control" id="pw4-note" rows="2" placeholder="Record completion feedback..."></textarea>
         </div>
@@ -1399,8 +1407,11 @@
         </div>
         <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main);" id="status-modal-title">Task Title
         </div>
-        <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;" id="status-modal-staff">Assigned to:
-          Kasun Bandara</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <div style="font-size: 11px; color: var(--text-dim);" id="status-modal-staff">Assigned to: Kasun Bandara</div>
+          <div style="font-size: 11px; font-family: var(--font-mono); color: var(--emerald); font-weight: 700;"
+            id="status-modal-curr-price">Cost: LKR 0.00</div>
+        </div>
       </div>
 
       <form id="form-change-status" onsubmit="handleModalStatusSubmit(event)">
@@ -1423,7 +1434,7 @@
           <div class="status-option-card" id="card-status-completed" onclick="pickModalStatus('completed')">
             <span class="status-card-icon">✓</span>
             <span class="status-card-title">Completed</span>
-            <span class="status-card-desc">Delivered / 100% Value</span>
+            <span class="status-card-desc">Delivered / Realize Value</span>
           </div>
 
           <div class="status-option-card" id="card-status-extended" onclick="pickModalStatus('extended')">
@@ -1445,16 +1456,48 @@
           </div>
         </div>
 
-        <div class="form-group" style="margin-top: 1rem;">
+        <!-- Job Cost / Price Revision Panel -->
+        <div
+          style="margin-top: 1rem; padding: 11px 12px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-sm);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label class="form-label" style="margin: 0; color: var(--emerald); display: flex; align-items: center; gap: 5px;">
+              <span>💰</span> Update Job Cost / Price <span id="status-modal-curr-code" style="font-family: var(--font-mono);">(LKR)</span>
+            </label>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" class="btn-sm" style="padding: 2px 7px; font-size: 10px;" onclick="adjustModalJobPrice(0)" title="Reset to original price">Orig</button>
+              <button type="button" class="btn-sm" style="padding: 2px 7px; font-size: 10px;" onclick="adjustModalJobPrice(-10)" title="Decrease by 10%">-10%</button>
+              <button type="button" class="btn-sm" style="padding: 2px 7px; font-size: 10px;" onclick="adjustModalJobPrice(10)" title="Increase by 10%">+10%</button>
+              <button type="button" class="btn-sm" style="padding: 2px 7px; font-size: 10px;" onclick="adjustModalJobPrice(25)" title="Increase by 25%">+25%</button>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 10.5px;">Job Cost (Stated Price)</label>
+              <input type="number" class="form-control" id="status-modal-stated-val" min="0" step="any"
+                oninput="onModalStatedPriceInput(this.value)" placeholder="45000" />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 10.5px;">Final Realized Value</label>
+              <input type="number" class="form-control" id="status-modal-realized-val" min="0" step="any"
+                placeholder="45000" />
+            </div>
+          </div>
+          <div style="font-size: 10px; color: var(--text-dim); margin-top: 6px;">
+            Change the job price above if the scope or final billing amount changed during or after the task.
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 0.85rem;">
           <label class="form-label">Manager Audit Note (Optional)</label>
           <input type="text" class="form-control" id="status-modal-note"
-            placeholder="e.g. Completed design mockups, waiting on client feedback" />
+            placeholder="e.g. Completed design mockups + extra revision (price updated)" />
         </div>
 
         <div
-          style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+          style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.15rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
           <button type="button" class="btn-sm" onclick="closeModal('modal-change-status')">Cancel</button>
-          <button type="submit" class="btn-action-primary">✓ Apply Status Transition ➔</button>
+          <button type="submit" class="btn-action-primary">✓ Save Status &amp; Price ➔</button>
         </div>
       </form>
     </div>
@@ -1595,7 +1638,7 @@
   <!-- =========================================================================
        FRONTEND CLIENT SCRIPT (API Integration, State & Reactivity)
        ========================================================================= -->
-  <script src="/js/platform-app.js?v=20261107-4"></script>
+  <script src="/js/platform-app.js?v=20261107-5"></script>
 </body>
 
 </html>

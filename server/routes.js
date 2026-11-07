@@ -625,14 +625,37 @@ async function handleApiRequest(req, res, url, body) {
     }
   }
 
-  // Pathway 4: Complete Job
+  // Pathway 4: Complete Job (supports optional statedValue & realizedValue revision)
   const matchComplete = pathname.match(/^\/api\/jobs\/([^/]+)\/complete\/?$/);
   if ((method === 'POST' || method === 'PATCH' || method === 'PUT') && matchComplete) {
     try {
       const jobId = matchComplete[1];
-      const { handlerNote } = body || {};
+      const { handlerNote, statedValue, realizedValue } = body || {};
 
-      const updatedJob = db.completeJob(jobId, { handlerNote });
+      const job = db.getJobById(jobId);
+      if (!job) return errorResponse(res, 404, 'Job not found');
+
+      const oldStated = Number(job.stated_value || 0);
+      if (statedValue !== undefined && statedValue !== null && statedValue !== '' && !isNaN(Number(statedValue))) {
+        job.stated_value = Math.max(0, Number(statedValue));
+      }
+
+      const updatedJob = db.completeJob(jobId, { handlerNote, statedValue, realizedValue });
+
+      if (realizedValue !== undefined && realizedValue !== null && realizedValue !== '' && !isNaN(Number(realizedValue))) {
+        updatedJob.realized_value = Math.max(0, Number(realizedValue));
+      } else {
+        updatedJob.realized_value = updatedJob.stated_value;
+      }
+
+      if (oldStated !== Number(updatedJob.stated_value) || Number(updatedJob.realized_value) !== oldStated) {
+        const lastLog = db.data.job_audit_logs[db.data.job_audit_logs.length - 1];
+        if (lastLog && lastLog.job_id === updatedJob.id && !lastLog.handler_note.includes('[Job Cost:')) {
+          lastLog.handler_note += ` [Job Cost: ${oldStated.toLocaleString()} → ${Number(updatedJob.stated_value).toLocaleString()} | Realized: ${Number(updatedJob.realized_value).toLocaleString()}]`;
+        }
+      }
+      db.save();
+
       return jsonResponse(res, 200, {
         success: true,
         job: updatedJob
@@ -643,7 +666,7 @@ async function handleApiRequest(req, res, url, body) {
   }
 
   // --------------------------------------------------------------------------
-  // DIRECT TASK STATUS UPDATE (Pending, Assigned, In Progress, Completed, Stopped, Extended)
+  // DIRECT TASK STATUS & COST UPDATE (Pending, Assigned, In Progress, Completed, Stopped, Extended)
   // --------------------------------------------------------------------------
   const matchStatus = pathname.match(/^\/api\/jobs\/([^/]+)\/status\/?$/);
   if ((method === 'POST' || method === 'PATCH' || method === 'PUT') && matchStatus) {
@@ -651,9 +674,43 @@ async function handleApiRequest(req, res, url, body) {
       const jobId = matchStatus[1];
       const targetStatus = (body && (body.status || body.newStatus)) || null;
       const handlerNote = (body && body.handlerNote) || '';
+      const statedValue = body ? body.statedValue : undefined;
+      const realizedValue = body ? body.realizedValue : undefined;
       if (!targetStatus) return errorResponse(res, 400, 'Status is required.');
 
-      const updatedJob = db.updateJobStatus(jobId, { newStatus: targetStatus, handlerNote });
+      const job = db.getJobById(jobId);
+      if (!job) return errorResponse(res, 404, 'Job not found');
+      const oldStated = Number(job.stated_value || 0);
+
+      if (statedValue !== undefined && statedValue !== null && statedValue !== '' && !isNaN(Number(statedValue))) {
+        job.stated_value = Math.max(0, Number(statedValue));
+      }
+
+      const updatedJob = db.updateJobStatus(jobId, {
+        newStatus: targetStatus,
+        handlerNote,
+        statedValue,
+        realizedValue
+      });
+
+      // Ensure running process applies custom statedValue / realizedValue even if db.js was loaded before hot-reload
+      if (statedValue !== undefined && statedValue !== null && statedValue !== '' && !isNaN(Number(statedValue))) {
+        updatedJob.stated_value = Math.max(0, Number(statedValue));
+      }
+      if (realizedValue !== undefined && realizedValue !== null && realizedValue !== '' && !isNaN(Number(realizedValue))) {
+        updatedJob.realized_value = Math.max(0, Number(realizedValue));
+      } else if (targetStatus === 'completed') {
+        updatedJob.realized_value = updatedJob.stated_value;
+      }
+
+      if (oldStated !== Number(updatedJob.stated_value) || (targetStatus === 'completed' && Number(updatedJob.realized_value) !== oldStated)) {
+        const lastLog = db.data.job_audit_logs[db.data.job_audit_logs.length - 1];
+        if (lastLog && lastLog.job_id === updatedJob.id && !lastLog.handler_note.includes('[Job Cost:')) {
+          lastLog.handler_note += ` [Job Cost: ${oldStated.toLocaleString()} → ${Number(updatedJob.stated_value).toLocaleString()}${targetStatus === 'completed' ? ` | Realized: ${Number(updatedJob.realized_value).toLocaleString()}` : ''}]`;
+        }
+      }
+      db.save();
+
       return jsonResponse(res, 200, {
         success: true,
         job: updatedJob
@@ -669,11 +726,48 @@ async function handleApiRequest(req, res, url, body) {
       const jobId = matchJobId[1];
       const targetStatus = (body && (body.status || body.newStatus)) || null;
       const handlerNote = (body && body.handlerNote) || '';
+      const statedValue = body ? body.statedValue : undefined;
+      const realizedValue = body ? body.realizedValue : undefined;
+
+      const job = db.getJobById(jobId);
+      if (!job) return errorResponse(res, 404, 'Job not found');
+      const oldStated = Number(job.stated_value || 0);
+
       if (targetStatus) {
-        const updatedJob = db.updateJobStatus(jobId, { newStatus: targetStatus, handlerNote });
+        if (statedValue !== undefined && statedValue !== null && statedValue !== '' && !isNaN(Number(statedValue))) {
+          job.stated_value = Math.max(0, Number(statedValue));
+        }
+        const updatedJob = db.updateJobStatus(jobId, { newStatus: targetStatus, handlerNote, statedValue, realizedValue });
+        if (realizedValue !== undefined && realizedValue !== null && realizedValue !== '' && !isNaN(Number(realizedValue))) {
+          updatedJob.realized_value = Math.max(0, Number(realizedValue));
+        } else if (targetStatus === 'completed') {
+          updatedJob.realized_value = updatedJob.stated_value;
+        }
+        db.save();
         return jsonResponse(res, 200, {
           success: true,
           job: updatedJob
+        });
+      } else if (statedValue !== undefined || realizedValue !== undefined) {
+        if (statedValue !== undefined && statedValue !== null && statedValue !== '' && !isNaN(Number(statedValue))) {
+          job.stated_value = Math.max(0, Number(statedValue));
+        }
+        if (realizedValue !== undefined && realizedValue !== null && realizedValue !== '' && !isNaN(Number(realizedValue))) {
+          job.realized_value = Math.max(0, Number(realizedValue));
+        } else if (job.status === 'completed') {
+          job.realized_value = job.stated_value;
+        }
+        db.addAuditLog({
+          job_id: job.id,
+          company_id: job.company_id,
+          action_type: 'executive_note',
+          delay_fault: 'none',
+          handler_note: (handlerNote || 'Job valuation revised.') + ` [Job Cost: ${oldStated.toLocaleString()} → ${Number(job.stated_value).toLocaleString()}]`
+        });
+        db.save();
+        return jsonResponse(res, 200, {
+          success: true,
+          job
         });
       }
       return errorResponse(res, 400, 'No supported fields provided to update.');

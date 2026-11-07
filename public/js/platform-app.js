@@ -637,7 +637,13 @@
             </div>
           </td>
           <td>
-            <strong>${formatLKR(job.stated_value)}</strong>
+            <div style="display:flex; align-items:center; gap:5px; cursor:pointer;" onclick="openChangeStatusModal('${job.id}', true)" title="Click to update job cost / price &amp; status">
+              <strong>${formatLKR(job.stated_value)}</strong>
+              <span style="font-size:10px; color:var(--emerald); background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); border-radius:4px; padding:1px 4px;">✎ Price</span>
+            </div>
+            ${job.status === 'completed' && Number(job.realized_value) !== Number(job.stated_value)
+              ? `<div style="font-size:9.5px; color:var(--emerald); font-family:var(--font-mono);">Realized: ${formatLKR(job.realized_value)}</div>`
+              : ''}
             ${privacyTag}
           </td>
           <td>
@@ -1038,25 +1044,59 @@
     }
 
     // ------------------------------------------------------------------------
-    // TASK STATUS MANAGEMENT (DIRECT INLINE & MODAL TRANSITION)
+    // TASK STATUS & JOB COST MANAGEMENT (DIRECT INLINE & MODAL TRANSITION)
     // ------------------------------------------------------------------------
     async function changeJobStatus(jobId, newStatus, note = '') {
-      let res = await apiRequest(`/api/jobs/${jobId}/status`, 'PATCH', {
+      let job = state.jobs.find(x => x.id === jobId);
+      const activeComp = state.companies.find(c => c.id === state.activeCompanyId);
+      const curr = (activeComp && activeComp.currency) || 'LKR';
+
+      let statedValue = job ? Number(job.stated_value || 0) : undefined;
+      let realizedValue = undefined;
+
+      if (job) {
+        const priceInput = prompt(
+          `Changing status of #${job.job_code} ("${job.title}") to ${newStatus.toUpperCase()}.\n\n` +
+          `Confirm or update Job Cost (${curr}):\n` +
+          `(Press OK to keep ${statedValue}, or type new job price)`,
+          String(statedValue)
+        );
+        if (priceInput === null) {
+          // User cancelled — restore original dropdown selection
+          await loadJobsTable(true);
+          await loadDashboardKPIs();
+          return;
+        }
+        const parsedPrice = parseFloat(priceInput.replace(/,/g, '').trim());
+        if (!isNaN(parsedPrice) && parsedPrice >= 0) {
+          statedValue = parsedPrice;
+          if (newStatus === 'completed') {
+            realizedValue = parsedPrice;
+          }
+        }
+      }
+
+      const payload = {
         status: newStatus,
         handlerNote: note
-      });
+      };
+      if (statedValue !== undefined) payload.statedValue = statedValue;
+      if (realizedValue !== undefined) payload.realizedValue = realizedValue;
+
+      let res = await apiRequest(`/api/jobs/${jobId}/status`, 'PATCH', payload);
 
       // Seamless fallback to POST in case client environment doesn't allow PATCH
       if (!res.success && res.error && res.error.includes('not found')) {
-        res = await apiRequest(`/api/jobs/${jobId}/status`, 'POST', {
-          status: newStatus,
-          handlerNote: note
-        });
+        res = await apiRequest(`/api/jobs/${jobId}/status`, 'POST', payload);
       }
 
       if (res.success) {
         const j = state.jobs.find(x => x.id === jobId);
-        if (j) j.status = newStatus;
+        if (j) {
+          j.status = newStatus;
+          if (res.job && res.job.stated_value !== undefined) j.stated_value = res.job.stated_value;
+          if (res.job && res.job.realized_value !== undefined) j.realized_value = res.job.realized_value;
+        }
         await refreshAllViews();
       } else {
         if (res.error && res.error.includes('not found')) {
@@ -1069,7 +1109,9 @@
     }
 
     let selectedModalStatus = 'in_progress';
-    async function openChangeStatusModal(jobId) {
+    let selectedModalOrigPrice = 0;
+
+    async function openChangeStatusModal(jobId, focusPrice = false) {
       let job = state.jobs.find(j => j.id === jobId);
       if (!job) {
         const res = await apiRequest('/api/jobs');
@@ -1080,10 +1122,29 @@
       }
       if (!job) return;
 
+      const activeComp = state.companies.find(c => c.id === state.activeCompanyId);
+      const curr = (activeComp && activeComp.currency) || 'LKR';
+
+      selectedModalOrigPrice = Number(job.stated_value || 0);
+
       document.getElementById('status-modal-job-id').value = job.id;
       document.getElementById('status-modal-job-code').textContent = `#${job.job_code}`;
       document.getElementById('status-modal-title').textContent = job.title;
       document.getElementById('status-modal-staff').textContent = `Assigned to: ${job.employeeName || 'Staff'} (${job.employeePhone || 'N/A'})`;
+
+      const currPriceEl = document.getElementById('status-modal-curr-price');
+      if (currPriceEl) currPriceEl.textContent = `Cost: ${formatLKR(job.stated_value, curr)}`;
+      const currCodeEl = document.getElementById('status-modal-curr-code');
+      if (currCodeEl) currCodeEl.textContent = `(${curr})`;
+
+      const statedInput = document.getElementById('status-modal-stated-val');
+      const realizedInput = document.getElementById('status-modal-realized-val');
+      if (statedInput) statedInput.value = Number(job.stated_value || 0);
+      if (realizedInput) {
+        realizedInput.value = job.status === 'completed'
+          ? Number(job.realized_value ?? job.stated_value ?? 0)
+          : Number(job.stated_value || 0);
+      }
 
       const currChip = document.getElementById('status-modal-curr-chip');
       currChip.textContent = (job.status || 'pending').toUpperCase();
@@ -1097,6 +1158,34 @@
       pickModalStatus(job.status || 'in_progress');
       document.getElementById('status-modal-note').value = '';
       openModal('modal-change-status');
+
+      if (focusPrice && statedInput) {
+        setTimeout(() => {
+          statedInput.focus();
+          statedInput.select();
+        }, 80);
+      }
+    }
+
+    function onModalStatedPriceInput(val) {
+      const num = parseFloat(val);
+      const realizedInput = document.getElementById('status-modal-realized-val');
+      if (realizedInput && !isNaN(num) && selectedModalStatus !== 'stopped') {
+        realizedInput.value = num;
+      }
+    }
+
+    function adjustModalJobPrice(pct) {
+      const statedInput = document.getElementById('status-modal-stated-val');
+      const realizedInput = document.getElementById('status-modal-realized-val');
+      if (!statedInput) return;
+
+      const base = selectedModalOrigPrice || parseFloat(statedInput.value) || 0;
+      const updated = pct === 0 ? base : Math.round(base * (1 + pct / 100));
+      statedInput.value = updated;
+      if (realizedInput && selectedModalStatus !== 'stopped') {
+        realizedInput.value = updated;
+      }
     }
 
     function pickModalStatus(status) {
@@ -1105,6 +1194,16 @@
         const card = document.getElementById(`card-status-${s}`);
         if (card) card.classList.toggle('active', s === status);
       });
+
+      const statedInput = document.getElementById('status-modal-stated-val');
+      const realizedInput = document.getElementById('status-modal-realized-val');
+      if (statedInput && realizedInput) {
+        if (status === 'stopped') {
+          realizedInput.value = 0;
+        } else {
+          realizedInput.value = statedInput.value;
+        }
+      }
     }
 
     async function handleModalStatusSubmit(e) {
@@ -1113,23 +1212,31 @@
       const note = document.getElementById('status-modal-note').value.trim();
       const newStatus = selectedModalStatus;
 
-      let res = await apiRequest(`/api/jobs/${jobId}/status`, 'PATCH', {
+      const statedInput = document.getElementById('status-modal-stated-val');
+      const realizedInput = document.getElementById('status-modal-realized-val');
+      const statedValue = statedInput && statedInput.value !== '' ? parseFloat(statedInput.value) : undefined;
+      const realizedValue = realizedInput && realizedInput.value !== '' ? parseFloat(realizedInput.value) : undefined;
+
+      const payload = {
         status: newStatus,
         handlerNote: note
-      });
+      };
+      if (statedValue !== undefined && !isNaN(statedValue)) payload.statedValue = statedValue;
+      if (realizedValue !== undefined && !isNaN(realizedValue)) payload.realizedValue = realizedValue;
+
+      let res = await apiRequest(`/api/jobs/${jobId}/status`, 'PATCH', payload);
 
       if (!res.success && res.error && res.error.includes('not found')) {
-        res = await apiRequest(`/api/jobs/${jobId}/status`, 'POST', {
-          status: newStatus,
-          handlerNote: note
-        });
+        res = await apiRequest(`/api/jobs/${jobId}/status`, 'POST', payload);
       }
 
       if (res.success) {
         closeModal('modal-change-status');
         await refreshAllViews();
+        const activeComp = state.companies.find(c => c.id === state.activeCompanyId);
+        const curr = (activeComp && activeComp.currency) || 'LKR';
         if (newStatus === 'completed') {
-          alert(`✓ Task #${res.job.job_code} marked completed. Realized Value: ${formatLKR(res.job.realized_value)}`);
+          alert(`✓ Task #${res.job.job_code} marked completed!\nJob Cost: ${formatLKR(res.job.stated_value, curr)}\nRealized Revenue: ${formatLKR(res.job.realized_value, curr)}`);
         }
       } else {
         if (res.error && res.error.includes('not found')) {
@@ -1156,6 +1263,10 @@
 
       state.selectedJobForOverdue = job;
       document.getElementById('overdue-modal-job-summary').textContent = `Resolving task: #${job.job_code} — ${job.title} (${job.employeeName})`;
+
+      // Pre-fill Pathway 4 job cost with current stated value
+      const pw4Val = document.getElementById('pw4-job-val');
+      if (pw4Val) pw4Val.value = Number(job.stated_value || 0);
 
       // Default next due date: tomorrow at 5:30 PM
       const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -1235,16 +1346,26 @@
       }
     }
 
-    // Pathway 4: Complete
+    // Pathway 4: Complete (with optional final job cost revision)
     async function handleCompleteJob(e) {
       e.preventDefault();
       const jobId = state.selectedJobForOverdue.id;
       const handlerNote = document.getElementById('pw4-note').value;
+      const pw4ValEl = document.getElementById('pw4-job-val');
+      const customVal = pw4ValEl && pw4ValEl.value !== '' ? parseFloat(pw4ValEl.value) : undefined;
 
-      const res = await apiRequest(`/api/jobs/${jobId}/complete`, 'POST', { handlerNote });
+      const payload = { handlerNote };
+      if (customVal !== undefined && !isNaN(customVal)) {
+        payload.statedValue = customVal;
+        payload.realizedValue = customVal;
+      }
+
+      const res = await apiRequest(`/api/jobs/${jobId}/complete`, 'POST', payload);
       if (res.success) {
         closeModal('modal-overdue-pathways');
-        alert(`✓ Task #${res.job.job_code} marked completed. Realized Value: ${formatLKR(res.job.realized_value)}`);
+        const activeComp = state.companies.find(c => c.id === state.activeCompanyId);
+        const curr = (activeComp && activeComp.currency) || 'LKR';
+        alert(`✓ Task #${res.job.job_code} marked completed.\nFinal Job Cost: ${formatLKR(res.job.stated_value, curr)}\nRealized Value: ${formatLKR(res.job.realized_value, curr)}`);
         await refreshAllViews();
       }
     }
