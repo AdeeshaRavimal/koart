@@ -540,6 +540,9 @@
               <button class="btn-sm" onclick="openStaffSharingModal('${emp.id}')" style="border-color:rgba(59,130,246,0.45); color:#93c5fd;" title="Configure Multi-Company Common Staff Sharing &amp; Profile">
                 🌐 Share
               </button>
+              <button class="btn-sm" onclick="openStaffCrossPortfolio('${emp.id}')" style="border-color:rgba(168,85,247,0.45); color:#c084fc;" title="View Cross-Company Workload &amp; Earnings across all companies">
+                📊 Portfolio
+              </button>
               <button class="btn-sm btn-wa" onclick="openStaffDailyAgenda('${emp.id}')" title="Generate &amp; Send Daily Morning WhatsApp Agenda Briefing">
                 🌅 Agenda
               </button>
@@ -2279,6 +2282,9 @@
         await loadCompanies();
         await loadEmployeesList();
         loadStaffTable();
+        if (crossStaffState.activeSubView === 'cross') {
+          loadCrossCompanyStaffReport();
+        }
         if (typeof showToast === 'function') {
           showToast(isShared
             ? `🌐 Updated "${fullName}" — now shared across ${sharedScope === 'all' ? 'all your companies' : sharedCompanyIds.length + ' companies'}!`
@@ -2286,6 +2292,493 @@
         }
       } else {
         alert('Failed to update staff sharing settings: ' + (res.error || 'Unknown error'));
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // CROSS-COMPANY STAFF WORKLOAD & EARNINGS REPORT
+    // ------------------------------------------------------------------------
+    const crossStaffState = {
+      activeSubView: 'directory',
+      dueMonth: '',
+      preset: 'all',
+      cachedReport: null
+    };
+
+    function switchStaffSubView(mode) {
+      crossStaffState.activeSubView = mode === 'cross' ? 'cross' : 'directory';
+      const dirEl = document.getElementById('staff-subview-directory');
+      const crossEl = document.getElementById('staff-subview-cross');
+      const btnDir = document.getElementById('btn-staff-subview-dir');
+      const btnCross = document.getElementById('btn-staff-subview-cross');
+
+      if (dirEl) dirEl.style.display = crossStaffState.activeSubView === 'directory' ? 'block' : 'none';
+      if (crossEl) crossEl.style.display = crossStaffState.activeSubView === 'cross' ? 'block' : 'none';
+      if (btnDir) btnDir.classList.toggle('active', crossStaffState.activeSubView === 'directory');
+      if (btnCross) btnCross.classList.toggle('active', crossStaffState.activeSubView === 'cross');
+
+      if (crossStaffState.activeSubView === 'cross') {
+        loadCrossCompanyStaffReport();
+      }
+    }
+
+    function openStaffCrossPortfolio(empId) {
+      switchStaffSubView('cross');
+      const empSelect = document.getElementById('cc-staff-emp-filter');
+      if (empSelect) {
+        empSelect.value = empId || '';
+      }
+      loadCrossCompanyStaffReport(empId);
+    }
+
+    function setCrossCompanyStaffMonth(preset) {
+      crossStaffState.preset = preset;
+      const now = new Date();
+      let ym = '';
+      if (preset === 'this') {
+        ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      } else if (preset === 'next') {
+        const nextD = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        ym = `${nextD.getFullYear()}-${String(nextD.getMonth() + 1).padStart(2, '0')}`;
+      }
+      crossStaffState.dueMonth = ym;
+
+      const picker = document.getElementById('cc-staff-month-picker');
+      if (picker) picker.value = ym;
+
+      ['all', 'this', 'next'].forEach(p => {
+        const pill = document.getElementById(`cc-staff-pill-${p}`);
+        if (pill) pill.classList.toggle('active', p === preset);
+      });
+
+      loadCrossCompanyStaffReport();
+    }
+
+    function setCrossCompanyStaffCustomMonth(monthVal) {
+      if (!monthVal) {
+        setCrossCompanyStaffMonth('all');
+        return;
+      }
+      crossStaffState.dueMonth = monthVal;
+      crossStaffState.preset = 'custom';
+      ['all', 'this', 'next'].forEach(p => {
+        const pill = document.getElementById(`cc-staff-pill-${p}`);
+        if (pill) pill.classList.remove('active');
+      });
+      loadCrossCompanyStaffReport();
+    }
+
+    function formatMultiCurrencyEarnings(currMap, field) {
+      if (!currMap || typeof currMap !== 'object') return 'LKR 0.00';
+      const keys = Object.keys(currMap);
+      if (!keys.length) return 'LKR 0.00';
+      return keys.map(curr => formatLKR((currMap[curr] && currMap[curr][field]) || 0, curr)).join(' + ');
+    }
+
+    async function loadCrossCompanyStaffReport(forcedEmpId = null) {
+      const scopeEl = document.getElementById('cc-staff-scope-filter');
+      const empEl = document.getElementById('cc-staff-emp-filter');
+      const onlyShared = scopeEl && scopeEl.value === 'shared';
+      const selectedEmpId = forcedEmpId !== null ? forcedEmpId : (empEl ? empEl.value : '');
+
+      const params = new URLSearchParams();
+      if (crossStaffState.dueMonth) params.append('dueMonth', crossStaffState.dueMonth);
+      if (onlyShared) params.append('onlyShared', 'true');
+
+      const res = await apiRequest(`/api/employees/cross-company-report?${params.toString()}`);
+      if (!res.success) return;
+
+      crossStaffState.cachedReport = res;
+
+      // Populate staff filter dropdown with all portfolio staff
+      if (empEl) {
+        const allStaff = res.staffReport || [];
+        const currentVal = selectedEmpId || empEl.value || '';
+        empEl.innerHTML = '<option value="">All Staff Members</option>' +
+          allStaff.map(s => `<option value="${s.id}">${s.isShared ? '🌐 ' : '🏢 '}${s.fullName} (${s.employeeCode})</option>`).join('');
+        if (currentVal && allStaff.some(s => s.id === currentVal)) {
+          empEl.value = currentVal;
+        } else {
+          empEl.value = '';
+        }
+      }
+
+      renderCrossCompanyStaffReport(res, empEl ? empEl.value : '');
+    }
+
+    function renderCrossCompanyStaffReport(res, filterEmpId = '') {
+      const summary = res.summary || {};
+      let staffList = res.staffReport || [];
+      if (filterEmpId) {
+        staffList = staffList.filter(s => s.id === filterEmpId);
+      }
+
+      const monthLabel = res.dueMonth
+        ? new Date(res.dueMonth + '-01T00:00:00').toLocaleString('en-US', { month: 'long', year: 'numeric' })
+        : 'All Scheduled Months';
+
+      const scopeLabelEl = document.getElementById('cc-staff-scope-label');
+      if (scopeLabelEl) {
+        scopeLabelEl.textContent = `Scope: ${monthLabel} · ${staffList.length} Staff Shown`;
+      }
+
+      // KPIs
+      const kpiStaff = document.getElementById('cc-kpi-staff-count');
+      const kpiStaffSub = document.getElementById('cc-kpi-staff-sub');
+      const kpiWorkload = document.getElementById('cc-kpi-workload');
+      const kpiWorkloadSub = document.getElementById('cc-kpi-workload-sub');
+      const kpiWanted = document.getElementById('cc-kpi-wanted');
+      const kpiWantedSub = document.getElementById('cc-kpi-wanted-sub');
+      const kpiRealized = document.getElementById('cc-kpi-realized');
+      const kpiRealizedSub = document.getElementById('cc-kpi-realized-sub');
+
+      if (kpiStaff) kpiStaff.textContent = `${summary.totalStaff || 0} Staff`;
+      if (kpiStaffSub) kpiStaffSub.textContent = `🌐 ${summary.commonStaffCount || 0} Common · 🏢 ${summary.singleCompanyStaffCount || 0} Single-Co`;
+      if (kpiWorkload) kpiWorkload.textContent = `${summary.totalOpenTasks || 0} Open / ${summary.totalCompletedTasks || 0} Done`;
+      if (kpiWorkloadSub) kpiWorkloadSub.textContent = `${summary.totalTasks || 0} total tasks · ${summary.totalOverdueTasks || 0} overdue across ${summary.totalWorkspaces || 1} company(s)`;
+      if (kpiWanted) kpiWanted.textContent = formatMultiCurrencyEarnings(summary.earningsByCurrency, 'wanted');
+      if (kpiWantedSub) kpiWantedSub.textContent = `Open / pending job budget (${monthLabel})`;
+      if (kpiRealized) kpiRealized.textContent = formatMultiCurrencyEarnings(summary.earningsByCurrency, 'realized');
+      if (kpiRealizedSub) kpiRealizedSub.textContent = `Planned Total: ${formatMultiCurrencyEarnings(summary.earningsByCurrency, 'planned')}`;
+
+      // Table 1: Staff Summary
+      const summaryTbody = document.getElementById('cc-staff-summary-tbody');
+      if (summaryTbody) {
+        if (!staffList.length) {
+          summaryTbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 26px; color: var(--text-dim);">No staff members match the selected filter.</td></tr>';
+        } else {
+          summaryTbody.innerHTML = staffList.map(s => {
+            const scopeChip = s.isShared
+              ? `<span class="chip chip-blue" style="font-size:10px;">🌐 ${s.sharedScope === 'selected' ? `Shared (${s.companyCount} Co.)` : 'Common · All Co.'}</span>`
+              : `<span class="chip chip-muted" style="font-size:10px;">🏢 Single Company</span>`;
+
+            const byCompanyHtml = (s.byCompany || []).map(c => `
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 8px; margin-bottom:4px; border-radius:5px; background:rgba(15,23,42,0.65); border:1px solid var(--border-color); font-size:11px;">
+                <div>
+                  <strong>🏢 ${c.companyName}</strong>
+                  <span style="font-size:9.5px; color:var(--text-dim); font-family:var(--font-mono);">(${c.currency})</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; font-family:var(--font-mono); font-size:10.5px;">
+                  <span>${c.openTasks} open / ${c.completedTasks} done</span>
+                  <span style="color:#f59e0b;" title="Wanted (Open Tasks)">⏳ ${formatLKR(c.wantedValue, c.currency)}</span>
+                  <span style="color:var(--emerald);" title="Realized (Completed Tasks)">✅ ${formatLKR(c.realizedValue, c.currency)}</span>
+                </div>
+              </div>
+            `).join('');
+
+            const wantedStr = formatMultiCurrencyEarnings(s.earningsByCurrency, 'wanted');
+            const realizedStr = formatMultiCurrencyEarnings(s.earningsByCurrency, 'realized');
+            const plannedStr = formatMultiCurrencyEarnings(s.earningsByCurrency, 'planned');
+
+            return `
+              <tr>
+                <td>
+                  <div style="font-weight:700;">${s.fullName}</div>
+                  <div style="font-size:10.5px; color:var(--text-dim);">${s.roleTitle} · <span style="font-family:var(--font-mono);">${s.employeeCode}</span></div>
+                  <div style="font-size:10px; color:var(--text-dim); font-family:var(--font-mono);">${s.whatsappNumber}</div>
+                </td>
+                <td>
+                  ${scopeChip}
+                  <div style="font-size:9.5px; color:var(--text-dim); margin-top:3px;">Home: ${s.homeCompanyName}</div>
+                </td>
+                <td style="min-width: 310px;">${byCompanyHtml || '<span style="font-size:11px; color:var(--text-dim);">No company breakdown</span>'}</td>
+                <td style="text-align:center; font-family:var(--font-mono);">
+                  <strong>${s.totalOpenTasks}</strong> Open / <strong>${s.totalCompletedTasks}</strong> Done
+                  <div style="font-size:10px; color:var(--text-dim);">${s.totalTasks} Total${s.totalOverdueTasks > 0 ? ` · <span style="color:var(--red);">${s.totalOverdueTasks} Overdue</span>` : ''}</div>
+                </td>
+                <td style="text-align:right; font-family:var(--font-mono);">
+                  <strong style="color:#f59e0b;">${wantedStr}</strong>
+                  <div style="font-size:9.5px; color:var(--text-dim);">Planned: ${plannedStr}</div>
+                </td>
+                <td style="text-align:right; font-family:var(--font-mono);">
+                  <strong style="color:var(--emerald);">${realizedStr}</strong>
+                </td>
+                <td style="text-align:center;">
+                  <span class="chip ${s.gradeClass}">${s.compositeScore}% (${s.grade})</span>
+                  <div style="font-size:9.5px; color:var(--text-dim); margin-top:2px;">SLA: ${s.strictOnTimeRate}%</div>
+                </td>
+                <td style="text-align:center;">
+                  <div style="display:flex; flex-direction:column; gap:4px; align-items:center;">
+                    <button type="button" class="btn-sm" onclick="openStaffSharingModal('${s.id}')" style="width:100%; justify-content:center; font-size:10.5px;">🌐 Scope</button>
+                    <button type="button" class="btn-sm btn-wa" onclick="openStaffDailyAgenda('${s.id}')" style="width:100%; justify-content:center; font-size:10.5px;">🌅 Agenda</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+
+      // Table 2: Individual Cross-Company Task Ledger
+      const tasksTbody = document.getElementById('cc-staff-tasks-tbody');
+      const tasksCountLabel = document.getElementById('cc-staff-tasks-count-label');
+      const allTasks = [];
+      staffList.forEach(s => {
+        (s.tasks || []).forEach(t => {
+          allTasks.push({
+            ...t,
+            employeeName: s.fullName,
+            employeeRole: s.roleTitle,
+            isShared: s.isShared
+          });
+        });
+      });
+
+      if (tasksCountLabel) {
+        tasksCountLabel.textContent = `Showing ${allTasks.length} task(s) in ${monthLabel}`;
+      }
+
+      if (tasksTbody) {
+        if (!allTasks.length) {
+          tasksTbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-dim);">No tasks recorded for the selected staff and month scope.</td></tr>';
+        } else {
+          tasksTbody.innerHTML = allTasks.map(t => {
+            const isDone = t.status === 'completed';
+            const statusClass = isDone ? 'chip-green' : (t.isOverdue ? 'chip-red' : 'chip-blue');
+            const valNum = isDone ? (t.realizedValue || t.statedValue || 0) : (t.statedValue || 0);
+            return `
+              <tr>
+                <td>
+                  <strong>🏢 ${t.companyName}</strong>
+                  <div style="font-size:10px; color:var(--text-dim); font-family:var(--font-mono);">${t.currency}</div>
+                </td>
+                <td><strong style="color:var(--red); font-family:var(--font-mono);">#${t.jobCode}</strong></td>
+                <td><strong>${t.title}</strong></td>
+                <td>
+                  <strong>${t.employeeName}</strong>
+                  ${t.isShared ? '<span class="chip chip-blue" style="font-size:9px; padding:1px 5px; margin-left:4px;">🌐 Common</span>' : ''}
+                  <div style="font-size:10px; color:var(--text-dim);">${t.employeeRole || ''}</div>
+                </td>
+                <td style="font-family:var(--font-mono); font-size:11px;">${formatDate(t.currentDueDate)}</td>
+                <td><span class="chip ${statusClass}">${(t.status || '').toUpperCase()}</span></td>
+                <td style="text-align:right; font-family:var(--font-mono);">
+                  <strong style="color:${isDone ? 'var(--emerald)' : '#f59e0b'};">${formatLKR(valNum, t.currency)}</strong>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    function exportCrossCompanyStaffCSV() {
+      const res = crossStaffState.cachedReport;
+      if (!res || !res.staffReport) {
+        alert('Please wait for the report to load first.');
+        return;
+      }
+      const empEl = document.getElementById('cc-staff-emp-filter');
+      const filterEmpId = empEl ? empEl.value : '';
+      let staffList = res.staffReport || [];
+      if (filterEmpId) staffList = staffList.filter(s => s.id === filterEmpId);
+
+      const esc = v => `"${String(v === undefined || v === null ? '' : v).replace(/"/g, '""')}"`;
+      const lines = [];
+      lines.push(['KOART SOLUTIONS — CROSS-COMPANY STAFF WORKLOAD & EARNINGS REPORT'].map(esc).join(','));
+      lines.push(['Month Scope', res.dueMonth || 'All Scheduled Months', 'Generated At', new Date().toLocaleString()].map(esc).join(','));
+      lines.push('');
+      lines.push(['SECTION 1: STAFF COMPANY-BY-COMPANY WORKLOAD & EARNINGS'].map(esc).join(','));
+      lines.push(['Employee Code', 'Employee Name', 'Role', 'Sharing Scope', 'Company Name', 'Currency', 'Open Tasks', 'Completed Tasks', 'Total Tasks', 'Wanted (Open)', 'Realized (Done)', 'Total Planned', 'Composite Score', 'Grade'].map(esc).join(','));
+
+      staffList.forEach(s => {
+        const scopeText = s.isShared ? (s.sharedScope === 'selected' ? 'Shared (Selected)' : 'Common (All Companies)') : 'Single Company';
+        (s.byCompany || []).forEach(c => {
+          lines.push([
+            s.employeeCode,
+            s.fullName,
+            s.roleTitle,
+            scopeText,
+            c.companyName,
+            c.currency,
+            c.openTasks,
+            c.completedTasks,
+            c.totalTasks,
+            c.wantedValue,
+            c.realizedValue,
+            c.plannedValue,
+            `${s.compositeScore}%`,
+            s.grade
+          ].map(esc).join(','));
+        });
+      });
+
+      lines.push('');
+      lines.push(['SECTION 2: CROSS-COMPANY TASK LEDGER'].map(esc).join(','));
+      lines.push(['Company', 'Currency', 'Job Code', 'Task Title', 'Assigned Staff', 'Scheduled Due Date', 'Status', 'Stated Value', 'Realized Value'].map(esc).join(','));
+      staffList.forEach(s => {
+        (s.tasks || []).forEach(t => {
+          lines.push([
+            t.companyName,
+            t.currency,
+            t.jobCode,
+            t.title,
+            s.fullName,
+            t.currentDueDate ? new Date(t.currentDueDate).toLocaleString() : '',
+            (t.status || '').toUpperCase(),
+            t.statedValue,
+            t.realizedValue
+          ].map(esc).join(','));
+        });
+      });
+
+      const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `KOart-Cross-Company-Staff-Report-${res.dueMonth || 'All-Months'}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportCrossCompanyStaffPDF() {
+      const res = crossStaffState.cachedReport;
+      if (!res || !res.staffReport) {
+        alert('Please wait for the Cross-Company Staff Report to load first.');
+        return;
+      }
+      const empEl = document.getElementById('cc-staff-emp-filter');
+      const filterEmpId = empEl ? empEl.value : '';
+      let staffList = res.staffReport || [];
+      if (filterEmpId) staffList = staffList.filter(s => s.id === filterEmpId);
+
+      const monthLabel = res.dueMonth
+        ? new Date(res.dueMonth + '-01T00:00:00').toLocaleString('en-US', { month: 'long', year: 'numeric' })
+        : 'All Scheduled Months';
+      const directorName = state.user ? state.user.fullName : 'Executive Director';
+      const nowStr = new Date().toLocaleString();
+
+      const staffRowsHtml = staffList.map(s => {
+        const scopeLabel = s.isShared ? `🌐 Common (${s.companyCount} Co.)` : '🏢 Single Co.';
+        const compLines = (s.byCompany || []).map(c =>
+          `<div style="display:flex; justify-content:space-between; font-size:9.5px; padding:2px 0; border-bottom:1px dashed #e2e8f0;">
+             <span><strong>${c.companyName}</strong> (${c.currency})</span>
+             <span style="font-family:'Space Mono',monospace;">${c.openTasks} open / ${c.completedTasks} done · ⏳ ${formatLKR(c.wantedValue, c.currency)} · ✅ ${formatLKR(c.realizedValue, c.currency)}</span>
+           </div>`
+        ).join('');
+        return `
+          <tr>
+            <td>
+              <div style="font-weight:700;">${s.fullName}</div>
+              <div style="font-size:9.5px; color:#64748b;">${s.roleTitle} (${s.employeeCode})</div>
+            </td>
+            <td style="text-align:center; font-size:9.5px; font-weight:700;">${scopeLabel}</td>
+            <td>${compLines}</td>
+            <td style="text-align:center; font-family:'Space Mono',monospace;"><strong>${s.totalOpenTasks}</strong> / ${s.totalCompletedTasks}</td>
+            <td style="text-align:right; font-family:'Space Mono',monospace; color:#d97706; font-weight:700;">${formatMultiCurrencyEarnings(s.earningsByCurrency, 'wanted')}</td>
+            <td style="text-align:right; font-family:'Space Mono',monospace; color:#059669; font-weight:700;">${formatMultiCurrencyEarnings(s.earningsByCurrency, 'realized')}</td>
+            <td style="text-align:center; font-family:'Space Mono',monospace; font-weight:700;">${s.compositeScore}% (${s.grade})</td>
+          </tr>
+        `;
+      }).join('');
+
+      const printHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>KOart — Cross-Company Staff Workload & Earnings Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="${window.location.origin}/css/print-studio.css?v=20261107-14" />
+  <style>
+    @page { size: A4 portrait; margin: 0 !important; }
+  </style>
+</head>
+<body>
+  <div class="print-studio-toolbar">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <span style="font-weight:800; font-family:'Bricolage Grotesque',sans-serif; font-size:15px;">KOART <span style="color:#db0031;">STUDIO</span> · Cross-Company Staff Workload &amp; Earnings PDF</span>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn-print-primary" onclick="window.print()">🖨️ Print / Save as PDF</button>
+      <button class="btn-ctrl" onclick="window.close()">✕ Close</button>
+    </div>
+  </div>
+  <div class="print-paper-container">
+    <div class="executive-report-sheet doc-page-sheet">
+      <div>
+        <div class="doc-running-header">
+          <div>KOART SOLUTIONS · MULTI-COMPANY COMMON STAFF AUDIT</div>
+          <div>SCOPE: ${monthLabel.toUpperCase()}</div>
+        </div>
+        <div class="doc-title-banner">
+          <div class="doc-title-left">
+            <div class="doc-type-kicker">CROSS-COMPANY HUMAN CAPITAL &amp; EARNINGS REPORT</div>
+            <h2 class="doc-main-heading">Common &amp; Multi-Company Staff Workload Report</h2>
+            <p class="doc-sub-desc">Consolidated workload, company-by-company job allocation, open wanted value, and realized earnings per employee.</p>
+          </div>
+          <div class="doc-meta-box">
+            <div>Period Scope: <strong>${monthLabel}</strong></div>
+            <div>Staff Included: <strong>${staffList.length} Member(s)</strong></div>
+            <div>Generated On: <strong>${nowStr}</strong></div>
+            <div>Authorized By: <strong>${directorName}</strong></div>
+          </div>
+        </div>
+
+        <div class="doc-section-heading">
+          <span class="badge">SECTION 01</span> Cross-Company Staff Workload &amp; Company-by-Company Breakdown
+        </div>
+        <table class="data-table" style="width:100%; table-layout:fixed; margin-bottom:16px;">
+          <colgroup>
+            <col style="width:17%;" />
+            <col style="width:11%;" />
+            <col style="width:33%;" />
+            <col style="width:9%;" />
+            <col style="width:11%;" />
+            <col style="width:11%;" />
+            <col style="width:8%;" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Staff Member</th>
+              <th style="text-align:center;">Scope</th>
+              <th>Company-by-Company Breakdown</th>
+              <th style="text-align:center;">Open/Done</th>
+              <th style="text-align:right;">Wanted</th>
+              <th style="text-align:right;">Realized</th>
+              <th style="text-align:center;">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${staffRowsHtml || '<tr><td colspan="7" style="text-align:center; padding:16px;">No staff records found.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-bottom-flow">
+        <div class="exec-signoff-block">
+          <div class="signoff-box">
+            <div class="signoff-role">Prepared By</div>
+            <div class="signoff-name">KOart Operations Platform</div>
+            <div class="signoff-line"><span>Automated Audit</span><span class="signoff-badge">Verified ✓</span></div>
+          </div>
+          <div class="signoff-box">
+            <div class="signoff-role">Reviewed &amp; Authorized By</div>
+            <div class="signoff-name">${directorName}</div>
+            <div class="signoff-line"><span>Executive Sign-off</span><span class="signoff-badge verified">Approved ✓</span></div>
+          </div>
+          <div class="signoff-box signoff-stamp-box">
+            <div class="signoff-role">Organization</div>
+            <div class="signoff-name" style="color:#db0031;">KOART SOLUTIONS</div>
+            <div class="signoff-line"><span>Official Record</span><span class="signoff-badge verified">Authenticated</span></div>
+          </div>
+        </div>
+        <div class="doc-running-footer">
+          <div>KOart Solutions — Multi-Company Common Staff Report</div>
+          <div>Confidential Executive Report · Scope: ${monthLabel}</div>
+          <div>Page 1 of 1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.open();
+        win.document.write(printHtml);
+        win.document.close();
       }
     }
 

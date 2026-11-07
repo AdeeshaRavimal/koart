@@ -343,6 +343,184 @@ async function handleApiRequest(req, res, url, body) {
     });
   }
 
+  // Cross-Company Staff Workload & Earnings Report (All Staff & Common Staff Across Companies)
+  if (method === 'GET' && pathname === '/api/employees/cross-company-report') {
+    const dueMonth = (url.searchParams.get('dueMonth') || '').trim();
+    const filterEmployeeId = (url.searchParams.get('employeeId') || '').trim();
+    const onlyShared = url.searchParams.get('onlyShared') === 'true';
+
+    const userCompanies = db.getCompaniesByOwner(currentUser.id);
+    const ownerCompanyIds = new Set(userCompanies.map(c => c.id));
+    const companyMap = new Map(userCompanies.map(c => [c.id, c]));
+
+    // All unique employees belonging to any of the user's companies
+    let ownerStaff = (db.data.employees || []).filter(e => ownerCompanyIds.has(e.company_id));
+    if (filterEmployeeId) {
+      ownerStaff = ownerStaff.filter(e => e.id === filterEmployeeId);
+    }
+    if (onlyShared) {
+      ownerStaff = ownerStaff.filter(e => Boolean(e.is_shared));
+    }
+
+    // All jobs across user's companies, optionally filtered by dueMonth (YYYY-MM)
+    const nowMs = Date.now();
+    const ownerJobs = (db.data.jobs || []).filter(j => {
+      if (!ownerCompanyIds.has(j.company_id)) return false;
+      if (dueMonth && /^\d{4}-\d{2}$/.test(dueMonth)) {
+        const refDate = (j.current_due_date || j.start_date || j.created_at || '').substring(0, 7);
+        if (refDate !== dueMonth) return false;
+      }
+      return true;
+    });
+
+    const portfolioEarningsByCurrency = {};
+    let portfolioOpenTasks = 0;
+    let portfolioCompletedTasks = 0;
+    let portfolioTotalTasks = 0;
+    let portfolioOverdueTasks = 0;
+
+    const staffReport = ownerStaff.map(emp => {
+      const homeComp = companyMap.get(emp.company_id) || { id: emp.company_id, name: 'Primary Workspace', currency_code: 'LKR', category: 'General' };
+      const isShared = Boolean(emp.is_shared);
+      const sharedScope = isShared ? (emp.shared_scope === 'selected' ? 'selected' : 'all') : 'single';
+      const availableComps = userCompanies.filter(c => isEmpInWorkspace(emp, c.id));
+
+      const empAllJobs = ownerJobs.filter(j => j.employee_id === emp.id);
+      const overallMetrics = calculateEmployeeScore(empAllJobs);
+
+      const empEarningsByCurrency = {};
+      let empOpen = 0;
+      let empDone = 0;
+      let empOverdue = 0;
+
+      // Include every company where the employee is available OR has assigned jobs
+      const relevantComps = userCompanies.filter(c =>
+        isEmpInWorkspace(emp, c.id) || empAllJobs.some(j => j.company_id === c.id)
+      );
+
+      const byCompany = relevantComps.map(comp => {
+        const compJobs = empAllJobs.filter(j => j.company_id === comp.id);
+        const compMetrics = calculateEmployeeScore(compJobs);
+        const curr = comp.currency_code || 'LKR';
+
+        const openJobs = compJobs.filter(j => !['completed', 'stopped'].includes(j.status));
+        const doneJobs = compJobs.filter(j => j.status === 'completed');
+        const overdueJobs = openJobs.filter(j => new Date(j.current_due_date).getTime() < nowMs);
+
+        const wantedValue = openJobs.reduce((s, j) => s + Number(j.stated_value || 0), 0);
+        const realizedValue = doneJobs.reduce((s, j) => s + Number(j.realized_value || j.stated_value || 0), 0);
+        const plannedValue = compJobs
+          .filter(j => j.status !== 'stopped')
+          .reduce((s, j) => s + Number(j.stated_value || 0), 0);
+
+        if (!empEarningsByCurrency[curr]) {
+          empEarningsByCurrency[curr] = { wanted: 0, realized: 0, planned: 0 };
+        }
+        empEarningsByCurrency[curr].wanted += wantedValue;
+        empEarningsByCurrency[curr].realized += realizedValue;
+        empEarningsByCurrency[curr].planned += plannedValue;
+
+        if (!portfolioEarningsByCurrency[curr]) {
+          portfolioEarningsByCurrency[curr] = { wanted: 0, realized: 0, planned: 0 };
+        }
+        portfolioEarningsByCurrency[curr].wanted += wantedValue;
+        portfolioEarningsByCurrency[curr].realized += realizedValue;
+        portfolioEarningsByCurrency[curr].planned += plannedValue;
+
+        empOpen += openJobs.length;
+        empDone += doneJobs.length;
+        empOverdue += overdueJobs.length;
+
+        return {
+          companyId: comp.id,
+          companyName: comp.name,
+          category: comp.category || 'Workspace',
+          currency: curr,
+          isHome: comp.id === emp.company_id,
+          openTasks: openJobs.length,
+          completedTasks: doneJobs.length,
+          totalTasks: compJobs.length,
+          overdueTasks: overdueJobs.length,
+          wantedValue,
+          realizedValue,
+          plannedValue,
+          score: compMetrics.compositeScore,
+          strictOnTimeRate: compMetrics.strictOnTimeRate,
+          grade: compMetrics.grade,
+          gradeClass: compMetrics.gradeClass
+        };
+      });
+
+      portfolioOpenTasks += empOpen;
+      portfolioCompletedTasks += empDone;
+      portfolioTotalTasks += empAllJobs.length;
+      portfolioOverdueTasks += empOverdue;
+
+      const tasks = empAllJobs.map(j => {
+        const c = companyMap.get(j.company_id) || homeComp;
+        const isOverdue = !['completed', 'stopped'].includes(j.status) && new Date(j.current_due_date).getTime() < nowMs;
+        return {
+          id: j.id,
+          jobCode: j.job_code,
+          title: j.title,
+          status: j.status,
+          priority: j.priority || 'medium',
+          companyId: c.id,
+          companyName: c.name,
+          currency: c.currency_code || 'LKR',
+          statedValue: Number(j.stated_value || 0),
+          realizedValue: Number(j.realized_value || 0),
+          currentDueDate: j.current_due_date,
+          isOverdue
+        };
+      }).sort((a, b) => new Date(a.currentDueDate || 0) - new Date(b.currentDueDate || 0));
+
+      return {
+        id: emp.id,
+        employeeCode: emp.employee_code,
+        fullName: emp.full_name,
+        roleTitle: emp.role_title,
+        whatsappNumber: emp.whatsapp_number,
+        isActive: emp.is_active !== false,
+        isShared,
+        sharedScope,
+        homeCompanyId: emp.company_id,
+        homeCompanyName: homeComp.name,
+        sharedCompanyIds: availableComps.map(c => c.id),
+        sharedCompanyNames: availableComps.map(c => c.name),
+        companyCount: relevantComps.length,
+        totalOpenTasks: empOpen,
+        totalCompletedTasks: empDone,
+        totalTasks: empAllJobs.length,
+        totalOverdueTasks: empOverdue,
+        compositeScore: overallMetrics.compositeScore,
+        strictOnTimeRate: overallMetrics.strictOnTimeRate,
+        grade: overallMetrics.grade,
+        gradeClass: overallMetrics.gradeClass,
+        earningsByCurrency: empEarningsByCurrency,
+        byCompany,
+        tasks
+      };
+    }).sort((a, b) => (b.isShared - a.isShared) || (b.totalTasks - a.totalTasks) || (b.compositeScore - a.compositeScore));
+
+    return jsonResponse(res, 200, {
+      success: true,
+      dueMonth: dueMonth || null,
+      summary: {
+        totalStaff: staffReport.length,
+        commonStaffCount: staffReport.filter(s => s.isShared).length,
+        singleCompanyStaffCount: staffReport.filter(s => !s.isShared).length,
+        totalWorkspaces: userCompanies.length,
+        totalOpenTasks: portfolioOpenTasks,
+        totalCompletedTasks: portfolioCompletedTasks,
+        totalTasks: portfolioTotalTasks,
+        totalOverdueTasks: portfolioOverdueTasks,
+        earningsByCurrency: portfolioEarningsByCurrency
+      },
+      staffReport
+    });
+  }
+
   if (method === 'POST' && pathname === '/api/employees') {
     try {
       const { fullName, roleTitle, whatsappNumber, employeeCode, isShared, sharedScope, sharedCompanyIds } = body || {};
