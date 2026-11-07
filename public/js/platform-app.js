@@ -1344,7 +1344,73 @@
         if (descEl) descEl.textContent = 'Cross-workspace comparison of team size, task completion, on-time delivery, and realized revenue.';
       } else if (n === 6) {
         if (titleEl) titleEl.textContent = 'All-In-One Executive Operations Dossier';
-        if (descEl) descEl.textContent = 'Complete operational summary combining Staff Leaderboard, Revenue Realization, Bottlenecks, and Activity Logs.';
+        if (descEl) descEl.textContent = 'Complete operational summary combining Staff Leaderboard, Revenue Realization, Bottlenecks, Activity Logs, and Multi-Company Summary.';
+      }
+
+      if (reportState.cachedData) {
+        renderReportTopKPIs(reportState.cachedData);
+      }
+    }
+
+    function formatPortfolioCurrencyMap(revMap, field = 'realized') {
+      if (!revMap || typeof revMap !== 'object') return 'LKR 0.00';
+      const keys = Object.keys(revMap);
+      if (!keys.length) return 'LKR 0.00';
+      return keys.map(curr => formatLKR(revMap[curr][field] || 0, curr)).join(' + ');
+    }
+
+    function renderReportTopKPIs(res) {
+      if (!res) return;
+      const currency = res.activeCompany ? res.activeCompany.currency : 'LKR';
+      const kpis = res.executiveKPIs || {};
+      const mc = res.multiCompanyRollup || {};
+      const isMultiTab = reportState.activeTab === 5;
+
+      const docVol = document.getElementById('doc-kpi-vol');
+      const meterVol = document.getElementById('doc-meter-vol');
+      const docVolSub = document.getElementById('doc-kpi-vol-sub');
+      const docVal = document.getElementById('doc-kpi-val');
+      const meterVal = document.getElementById('doc-meter-val');
+      const docValSub = document.getElementById('doc-kpi-val-sub');
+      const docOntime = document.getElementById('doc-kpi-ontime');
+      const meterOntime = document.getElementById('doc-meter-ontime');
+      const docGrade = document.getElementById('doc-kpi-grade');
+      const docSub = document.getElementById('doc-kpi-sub');
+
+      if (isMultiTab && mc.totalWorkspaces) {
+        const compRate = mc.completionRate || 0;
+        if (docVol) docVol.textContent = `${mc.completedJobs || 0} / ${mc.totalJobs || 0}`;
+        if (meterVol) meterVol.style.width = `${Math.min(100, Math.max(0, compRate))}%`;
+        if (docVolSub) docVolSub.textContent = `${mc.totalWorkspaces} Workspaces · ${mc.totalStaff || 0} Staff`;
+
+        const realizedStr = formatPortfolioCurrencyMap(mc.revenueByCurrency, 'realized');
+        const statedStr = formatPortfolioCurrencyMap(mc.revenueByCurrency, 'stated');
+        if (docVal) docVal.textContent = realizedStr;
+        if (meterVal) meterVal.style.width = `${Math.min(100, Math.max(0, compRate))}%`;
+        if (docValSub) docValSub.textContent = `Stated: ${statedStr}`;
+
+        if (docOntime) docOntime.textContent = `${mc.strictOnTimeRate || 100}%`;
+        if (meterOntime) meterOntime.style.width = `${Math.min(100, Math.max(0, mc.strictOnTimeRate || 100))}%`;
+
+        if (docGrade) docGrade.textContent = `${mc.totalWorkspaces} Entities`;
+        if (docSub) docSub.innerHTML = `Avg Score: <strong>${mc.avgPortfolioScore || 0}%</strong> · ${mc.overdueJobs || 0} Overdue`;
+      } else {
+        if (docVol) docVol.textContent = `${kpis.completedJobs || 0} / ${kpis.totalJobs || 0}`;
+        if (meterVol) meterVol.style.width = `${Math.min(100, Math.max(0, kpis.completionRate || 0))}%`;
+        if (docVolSub) docVolSub.textContent = `${kpis.completionRate || 0}% Completion Rate`;
+
+        if (docVal) docVal.textContent = formatLKR(kpis.totalRealizedValue || 0, currency);
+        if (meterVal) meterVal.style.width = `${Math.min(100, Math.max(0, kpis.realizationRate || 0))}%`;
+        if (docValSub) docValSub.textContent = `Stated: ${formatLKR(kpis.totalStatedValue || 0, currency)} (${kpis.realizationRate || 0}%)`;
+
+        if (docOntime) docOntime.textContent = `${kpis.strictOnTimeRate || 0}%`;
+        if (meterOntime) meterOntime.style.width = `${Math.min(100, Math.max(0, kpis.strictOnTimeRate || 0))}%`;
+
+        let cleanGrade = kpis.healthGrade || 'Healthy';
+        if (cleanGrade.includes('Healthy')) cleanGrade = 'Healthy';
+        if (cleanGrade.includes('Grade A+')) cleanGrade = 'Grade A+';
+        if (docGrade) docGrade.textContent = cleanGrade;
+        if (docSub) docSub.innerHTML = `Avg Score: <strong>${kpis.avgProductivityScore || 0}%</strong> · ${kpis.overdueJobs || 0} Overdue`;
       }
     }
 
@@ -1581,32 +1647,7 @@
       if (docRef) docRef.textContent = `REF: ${refId}`;
 
       // Render Single Unified Document Scorecard & Progress Meters
-      const docVol = document.getElementById('doc-kpi-vol');
-      if (docVol) docVol.textContent = `${kpis.completedJobs || 0} / ${kpis.totalJobs || 0}`;
-      const meterVol = document.getElementById('doc-meter-vol');
-      if (meterVol) meterVol.style.width = `${Math.min(100, Math.max(0, kpis.completionRate || 0))}%`;
-      const docVolSub = document.getElementById('doc-kpi-vol-sub');
-      if (docVolSub) docVolSub.textContent = `${kpis.completionRate || 0}% Completion Rate`;
-
-      const docVal = document.getElementById('doc-kpi-val');
-      if (docVal) docVal.textContent = formatLKR(kpis.totalRealizedValue || 0, currency);
-      const meterVal = document.getElementById('doc-meter-val');
-      if (meterVal) meterVal.style.width = `${Math.min(100, Math.max(0, kpis.realizationRate || 0))}%`;
-      const docValSub = document.getElementById('doc-kpi-val-sub');
-      if (docValSub) docValSub.textContent = `Stated: ${formatLKR(kpis.totalStatedValue || 0, currency)} (${kpis.realizationRate || 0}%)`;
-
-      const docOntime = document.getElementById('doc-kpi-ontime');
-      if (docOntime) docOntime.textContent = `${kpis.strictOnTimeRate || 0}%`;
-      const meterOntime = document.getElementById('doc-meter-ontime');
-      if (meterOntime) meterOntime.style.width = `${Math.min(100, Math.max(0, kpis.strictOnTimeRate || 0))}%`;
-
-      const docGrade = document.getElementById('doc-kpi-grade');
-      let cleanGrade = kpis.healthGrade || 'Healthy';
-      if (cleanGrade.includes('Healthy')) cleanGrade = 'Healthy';
-      if (cleanGrade.includes('Grade A+')) cleanGrade = 'Grade A+';
-      if (docGrade) docGrade.textContent = cleanGrade;
-      const docSub = document.getElementById('doc-kpi-sub');
-      if (docSub) docSub.innerHTML = `Avg Score: <strong>${kpis.avgProductivityScore || 0}%</strong> · ${kpis.overdueJobs || 0} Overdue`;
+      renderReportTopKPIs(res);
 
       // Render Report 1: Staff Leaderboard (8 Clean Columns)
       const lbTbody = document.getElementById('report-leaderboard-tbody');
@@ -1722,28 +1763,89 @@
         if (dosAudTbody) dosAudTbody.innerHTML = audRows;
       }
 
-      // Render Report 5: Multi-Company Summary (7 Clean Columns)
+      // Render Report 5: Multi-Company Summary (8 Clean Columns + Portfolio Rollup Footer)
       const r5 = res.report5MultiCompany || [];
+      const mcRollup = res.multiCompanyRollup || {};
       const mcTbody = document.getElementById('report-multicompany-tbody');
-      if (mcTbody) {
-        if (!r5.length) {
-          mcTbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-dim);">No workspaces provisioned under this account.</td></tr>';
-        } else {
-          mcTbody.innerHTML = r5.map(c => `
+      const mcTfoot = document.getElementById('report-multicompany-tfoot');
+      const dosMcTbody = document.getElementById('report-dossier-mc-tbody');
+      const dosMcTfoot = document.getElementById('report-dossier-mc-tfoot');
+
+      // Update Multi-Company Portfolio Summary Strip
+      const stripWs = document.getElementById('mc-strip-workspaces');
+      const stripStaff = document.getElementById('mc-strip-staff');
+      const stripTasks = document.getElementById('mc-strip-tasks');
+      const stripSla = document.getElementById('mc-strip-sla');
+      const stripRev = document.getElementById('mc-strip-revenue');
+
+      const portfolioRealizedStr = formatPortfolioCurrencyMap(mcRollup.revenueByCurrency, 'realized');
+      const portfolioStatedStr = formatPortfolioCurrencyMap(mcRollup.revenueByCurrency, 'stated');
+
+      if (stripWs) stripWs.textContent = mcRollup.totalWorkspaces || r5.length || 0;
+      if (stripStaff) stripStaff.textContent = mcRollup.totalStaff || 0;
+      if (stripTasks) stripTasks.textContent = `${mcRollup.completedJobs || 0} / ${mcRollup.totalJobs || 0} (${mcRollup.completionRate || 0}%)`;
+      if (stripSla) stripSla.textContent = `${mcRollup.strictOnTimeRate || 100}%`;
+      if (stripRev) stripRev.textContent = portfolioRealizedStr;
+
+      if (!r5.length) {
+        const emptyMc = '<tr><td colspan="8" style="text-align:center; padding: 24px; color: var(--text-dim);">No workspaces provisioned under this account.</td></tr>';
+        if (mcTbody) mcTbody.innerHTML = emptyMc;
+        if (dosMcTbody) dosMcTbody.innerHTML = emptyMc;
+        if (mcTfoot) mcTfoot.innerHTML = '';
+        if (dosMcTfoot) dosMcTfoot.innerHTML = '';
+      } else {
+        const mcRowsHtml = r5.map(c => {
+          const isCurrentWs = res.activeCompany && res.activeCompany.id === c.companyId;
+          const activeBadge = isCurrentWs ? ' <span style="font-size:9px; color:var(--red); font-family:var(--font-mono);">(ACTIVE)</span>' : '';
+          const staffListHint = (c.staffNames && c.staffNames.length) ? c.staffNames.join(', ') : 'No staff assigned';
+          return `
             <tr>
               <td>
-                <div style="font-weight:700;">${c.companyName}</div>
-                <div style="font-size:10.5px; color:var(--text-dim);">${c.category}</div>
+                <div style="font-weight:700;">${c.companyName}${activeBadge}</div>
+                <div style="font-size:10px; color:var(--text-dim);">${c.category} · ${staffListHint}</div>
               </td>
+              <td style="text-align: center; font-family: var(--font-mono); font-weight: 700;">${c.currency}</td>
               <td style="text-align: center; font-family: var(--font-mono);">${c.staffCount}</td>
-              <td style="text-align: center; font-family: var(--font-mono);"><strong>${c.completedJobs}</strong> / ${c.totalJobs}</td>
+              <td style="text-align: center; font-family: var(--font-mono);">
+                <strong>${c.completedJobs}</strong> / ${c.totalJobs}
+                <span style="font-size:10px; color:var(--text-dim);">(${c.completionRate || 0}%)</span>
+              </td>
               <td style="text-align: right; font-family: var(--font-mono);">${c.strictOnTimeRate}%</td>
               <td style="text-align: right; font-family: var(--font-mono);">${formatLKR(c.statedValue, c.currency)}</td>
-              <td style="text-align: right; font-family: var(--font-mono);"><strong style="color:var(--emerald);">${formatLKR(c.realizedValue, c.currency)}</strong></td>
-              <td style="text-align: center;"><span class="chip chip-green">${c.realizationRate}%</span></td>
+              <td style="text-align: right; font-family: var(--font-mono);">
+                <strong style="color:var(--emerald);">${formatLKR(c.realizedValue, c.currency)}</strong>
+                <div style="font-size:9.5px; color:var(--text-dim);">${c.realizationRate}% realized</div>
+              </td>
+              <td style="text-align: center;">
+                <span class="chip ${c.gradeClass || 'chip-muted'}">${c.grade || 'Healthy'}</span>
+              </td>
             </tr>
-          `).join('');
-        }
+          `;
+        }).join('');
+
+        const mcFootHtml = `
+          <tr style="background: rgba(219, 0, 49, 0.06); font-weight: 700; border-top: 2px solid var(--border-color);">
+            <td>
+              <div style="font-weight:800; color:var(--text-main);">PORTFOLIO TOTAL (${mcRollup.totalWorkspaces || r5.length} Workspaces)</div>
+              <div style="font-size:10px; color:var(--text-dim);">Consolidated Multi-Company Rollup</div>
+            </td>
+            <td style="text-align: center; font-family: var(--font-mono); font-size: 10px;">MULTI</td>
+            <td style="text-align: center; font-family: var(--font-mono);"><strong>${mcRollup.totalStaff || 0}</strong></td>
+            <td style="text-align: center; font-family: var(--font-mono);">
+              <strong>${mcRollup.completedJobs || 0}</strong> / ${mcRollup.totalJobs || 0}
+              <span style="font-size:10px; color:var(--text-dim);">(${mcRollup.completionRate || 0}%)</span>
+            </td>
+            <td style="text-align: right; font-family: var(--font-mono);"><strong>${mcRollup.strictOnTimeRate || 100}%</strong></td>
+            <td style="text-align: right; font-family: var(--font-mono); font-size: 10.5px;">${portfolioStatedStr}</td>
+            <td style="text-align: right; font-family: var(--font-mono); font-size: 10.5px; color: var(--emerald);"><strong>${portfolioRealizedStr}</strong></td>
+            <td style="text-align: center;"><span class="chip chip-green">${mcRollup.avgPortfolioScore || 0}% Avg</span></td>
+          </tr>
+        `;
+
+        if (mcTbody) mcTbody.innerHTML = mcRowsHtml;
+        if (dosMcTbody) dosMcTbody.innerHTML = mcRowsHtml;
+        if (mcTfoot) mcTfoot.innerHTML = mcFootHtml;
+        if (dosMcTfoot) dosMcTfoot.innerHTML = mcFootHtml;
       }
     }
 

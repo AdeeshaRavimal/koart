@@ -333,15 +333,42 @@ function generateReports(rawDb, companyId, options = {}) {
   };
 
   // --------------------------------------------------------------------------
-  // REPORT 5: Multi-Company Executive Summary (Cross-Company)
+  // REPORT 5: Multi-Company Executive Summary (Cross-Company Portfolio)
   // --------------------------------------------------------------------------
-  const multiCompanySummary = db.companies.map(comp => {
+  const ownerCompanies = company.owner_id
+    ? db.companies.filter(c => c.owner_id === company.owner_id)
+    : db.companies;
+
+  const revenueByCurrency = {};
+  let portfolioTotalStaff = 0;
+  let portfolioTotalJobs = 0;
+  let portfolioCompletedJobs = 0;
+  let portfolioActiveJobs = 0;
+  let portfolioOverdueJobs = 0;
+  let portfolioStrictOnTimeJobs = 0;
+
+  const multiCompanySummary = ownerCompanies.map(comp => {
     const compStaff = db.employees.filter(e => e.company_id === comp.id);
-    const compJobs = db.jobs.filter(j => j.company_id === comp.id);
+    let compJobs = db.jobs.filter(j => j.company_id === comp.id);
+
+    // Apply date range filter if specified
+    if (startMs !== null || endMs !== null) {
+      compJobs = compJobs.filter(j => {
+        const refMs = new Date(j.created_at || j.current_due_date).getTime();
+        if (startMs !== null && refMs < startMs) return false;
+        if (endMs !== null && refMs > endMs) return false;
+        return true;
+      });
+    }
 
     const compStated = compJobs.reduce((s, j) => s + Number(j.stated_value || 0), 0);
     const compRealized = compJobs.reduce((s, j) => s + Number(j.realized_value || 0), 0);
+    const compPipeline = compJobs
+      .filter(j => j.status !== 'completed' && j.status !== 'stopped')
+      .reduce((s, j) => s + Number(j.stated_value || 0), 0);
+
     const compDone = compJobs.filter(j => j.status === 'completed').length;
+    const compActive = compJobs.filter(j => j.status !== 'completed' && j.status !== 'stopped').length;
     const compOverdue = compJobs.filter(j => {
       return new Date(j.current_due_date).getTime() < nowMs && j.status !== 'completed' && j.status !== 'stopped';
     }).length;
@@ -353,23 +380,95 @@ function generateReports(rawDb, companyId, options = {}) {
       return c <= o;
     }).length;
 
-    const strictRate = compDone > 0 ? Math.round((compStrictOnTime / compDone) * 100) : 0;
+    const strictRate = compDone > 0 ? Math.round((compStrictOnTime / compDone) * 100) : 100;
+    const compRate = compJobs.length > 0 ? Math.round((compDone / compJobs.length) * 100) : 0;
+    const realRate = compStated > 0 ? Math.round((compRealized / compStated) * 100) : 0;
+
+    // Compute company productivity score across its staff with assigned jobs
+    const staffScores = compStaff
+      .map(emp => {
+        const empJobs = compJobs.filter(j => j.employee_id === emp.id);
+        return empJobs.length > 0 ? calculateEmployeeScore(empJobs).compositeScore : null;
+      })
+      .filter(s => s !== null);
+    const compAvgScore = staffScores.length > 0
+      ? Math.round((staffScores.reduce((a, b) => a + b, 0) / staffScores.length) * 10) / 10
+      : 0;
+
+    let compGrade = 'Healthy';
+    let compGradeClass = 'chip-muted';
+    if (compJobs.length > 0) {
+      if (compAvgScore >= 90) { compGrade = 'Grade A+'; compGradeClass = 'chip-green'; }
+      else if (compAvgScore >= 80) { compGrade = 'Grade A'; compGradeClass = 'chip-blue'; }
+      else if (compAvgScore >= 70) { compGrade = 'Coaching'; compGradeClass = 'chip-amber'; }
+      else { compGrade = 'Review'; compGradeClass = 'chip-red'; }
+    } else {
+      compGrade = 'No Tasks';
+      compGradeClass = 'chip-muted';
+    }
+
+    const curr = comp.currency_code || 'LKR';
+    if (!revenueByCurrency[curr]) {
+      revenueByCurrency[curr] = { stated: 0, realized: 0, pipeline: 0 };
+    }
+    revenueByCurrency[curr].stated += compStated;
+    revenueByCurrency[curr].realized += compRealized;
+    revenueByCurrency[curr].pipeline += compPipeline;
+
+    portfolioTotalStaff += compStaff.length;
+    portfolioTotalJobs += compJobs.length;
+    portfolioCompletedJobs += compDone;
+    portfolioActiveJobs += compActive;
+    portfolioOverdueJobs += compOverdue;
+    portfolioStrictOnTimeJobs += compStrictOnTime;
 
     return {
       companyId: comp.id,
       companyName: comp.name,
-      category: comp.category,
-      currency: comp.currency_code,
+      category: comp.category || 'General Operations',
+      currency: curr,
       staffCount: compStaff.length,
+      staffNames: compStaff.map(s => s.full_name),
       totalJobs: compJobs.length,
       completedJobs: compDone,
+      activeJobs: compActive,
       overdueCount: compOverdue,
+      completionRate: compRate,
       strictOnTimeRate: strictRate,
       statedValue: compStated,
       realizedValue: compRealized,
-      realizationRate: compStated > 0 ? Math.round((compRealized / compStated) * 100) : 0
+      pipelineValue: compPipeline,
+      realizationRate: realRate,
+      avgScore: compAvgScore,
+      grade: compGrade,
+      gradeClass: compGradeClass
     };
   });
+
+  const portfolioCompletionRate = portfolioTotalJobs > 0
+    ? Math.round((portfolioCompletedJobs / portfolioTotalJobs) * 100)
+    : 0;
+  const portfolioStrictOnTimeRate = portfolioCompletedJobs > 0
+    ? Math.round((portfolioStrictOnTimeJobs / portfolioCompletedJobs) * 100)
+    : 100;
+
+  const activeWorkspacesWithJobs = multiCompanySummary.filter(c => c.totalJobs > 0);
+  const portfolioAvgScore = activeWorkspacesWithJobs.length > 0
+    ? Math.round((activeWorkspacesWithJobs.reduce((s, c) => s + c.avgScore, 0) / activeWorkspacesWithJobs.length) * 10) / 10
+    : 0;
+
+  const multiCompanyRollup = {
+    totalWorkspaces: multiCompanySummary.length,
+    totalStaff: portfolioTotalStaff,
+    totalJobs: portfolioTotalJobs,
+    completedJobs: portfolioCompletedJobs,
+    activeJobs: portfolioActiveJobs,
+    overdueJobs: portfolioOverdueJobs,
+    completionRate: portfolioCompletionRate,
+    strictOnTimeRate: portfolioStrictOnTimeRate,
+    avgPortfolioScore: portfolioAvgScore,
+    revenueByCurrency
+  };
 
   // --------------------------------------------------------------------------
   // EXECUTIVE KPI ROLLUP FOR FILTERED SCOPE
@@ -425,7 +524,8 @@ function generateReports(rawDb, companyId, options = {}) {
     report2JobValue: valueReport,
     report3Bottlenecks: bottleneckReport,
     report4AuditLog: auditReport,
-    report5MultiCompany: multiCompanySummary
+    report5MultiCompany: multiCompanySummary,
+    multiCompanyRollup
   };
 }
 
@@ -614,29 +714,49 @@ function generateCsvReport(reportType, reportData, companyName = 'KOart Platform
 
   if (repType === 'multicompany' || repType === '5' || repType === 'all') {
     lines.push(toCsvLine(['=== REPORT 5: MULTI-COMPANY EXECUTIVE SUMMARY ===']));
+    const mcRollup = reportData.multiCompanyRollup || {};
+    lines.push(toCsvLine(['Total Workspaces', mcRollup.totalWorkspaces || 0]));
+    lines.push(toCsvLine(['Total Portfolio Staff', mcRollup.totalStaff || 0]));
+    lines.push(toCsvLine(['Total Portfolio Tasks', `${mcRollup.completedJobs || 0} / ${mcRollup.totalJobs || 0} (${mcRollup.completionRate || 0}%)`]));
+    lines.push(toCsvLine(['Portfolio On-Time SLA (%)', `${mcRollup.strictOnTimeRate || 100}%`]));
+    lines.push('');
     lines.push(toCsvLine([
       'Company Workspace',
       'Business Category',
+      'Currency',
       'Staff Headcount',
+      'Staff Members',
       'Total Jobs',
       'Completed Jobs',
+      'Active / Pending Jobs',
+      'Overdue Jobs',
       'Strict On-Time Rate (%)',
       'Total Stated Valuation',
       'Total Realized Revenue',
-      'Realization Ratio (%)'
+      'Active Pipeline Value',
+      'Realization Ratio (%)',
+      'Avg Productivity Score (%)',
+      'Executive Grade'
     ]));
 
     (reportData.report5MultiCompany || []).forEach(c => {
       lines.push(toCsvLine([
         c.companyName,
         c.category,
+        c.currency,
         c.staffCount,
+        (c.staffNames || []).join('; '),
         c.totalJobs,
         c.completedJobs,
+        c.activeJobs || 0,
+        c.overdueCount || 0,
         `${c.strictOnTimeRate}%`,
         `${c.currency} ${c.statedValue}`,
         `${c.currency} ${c.realizedValue}`,
-        `${c.realizationRate}%`
+        `${c.currency} ${c.pipelineValue || 0}`,
+        `${c.realizationRate}%`,
+        `${c.avgScore || 0}%`,
+        c.grade || 'Healthy'
       ]));
     });
     lines.push('');

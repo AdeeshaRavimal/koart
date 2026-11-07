@@ -438,14 +438,20 @@
         <div class="report-filter-bar">
           <!-- Time Presets -->
           <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
-            <span style="font-size: 10.5px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">
+            <span
+              style="font-size: 10.5px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">
               Period:
             </span>
-            <button class="report-filter-pill" id="pill-preset-today" onclick="setReportDatePreset('today')">Today</button>
-            <button class="report-filter-pill" id="pill-preset-week" onclick="setReportDatePreset('week')">This Week</button>
-            <button class="report-filter-pill" id="pill-preset-month" onclick="setReportDatePreset('month')">This Month</button>
-            <button class="report-filter-pill" id="pill-preset-lastmonth" onclick="setReportDatePreset('lastmonth')">Last Month</button>
-            <button class="report-filter-pill active" id="pill-preset-all" onclick="setReportDatePreset('all')">All Time</button>
+            <button class="report-filter-pill" id="pill-preset-today"
+              onclick="setReportDatePreset('today')">Today</button>
+            <button class="report-filter-pill" id="pill-preset-week" onclick="setReportDatePreset('week')">This
+              Week</button>
+            <button class="report-filter-pill" id="pill-preset-month" onclick="setReportDatePreset('month')">This
+              Month</button>
+            <button class="report-filter-pill" id="pill-preset-lastmonth"
+              onclick="setReportDatePreset('lastmonth')">Last Month</button>
+            <button class="report-filter-pill active" id="pill-preset-all" onclick="setReportDatePreset('all')">All
+              Time</button>
           </div>
 
           <!-- Custom Date & Staff Filter (Auto-triggers on change) -->
@@ -468,7 +474,8 @@
         </div>
 
         <!-- Active Filter Summary Line -->
-        <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
+        <div
+          style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
           <div id="report-filter-summary-chip">
             <span>📅</span> Active Scope: <strong>All Staff</strong> · <strong>All Time</strong>
           </div>
@@ -497,7 +504,8 @@
               <span class="cover-title-accent">&amp; FINANCIAL AUDIT</span>
             </h1>
             <div class="cover-desc">
-              Comprehensive summary of team productivity, on-time task delivery, revenue realization, and operational SLA tracking.
+              Comprehensive summary of team productivity, on-time task delivery, revenue realization, and operational
+              SLA tracking.
             </div>
           </div>
 
@@ -556,7 +564,8 @@
           </div>
 
           <!-- Document Main Heading Banner -->
-          <div style="margin-bottom: 1.15rem; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+          <div
+            style="margin-bottom: 1.15rem; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
             <div>
               <h2 id="doc-report-title"
                 style="font-family: var(--font-display); font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em;">
@@ -685,27 +694,41 @@
               </div>
             </div>
 
-            <!-- REPORT 5: MULTI-COMPANY CONTENT (7 Clean Columns) -->
+            <!-- REPORT 5: MULTI-COMPANY CONTENT (8 Clean Columns + Portfolio Rollup Footer) -->
             <div id="report-content-5" style="display: none;">
+              <div id="mc-portfolio-summary-strip"
+                style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 14px; margin-bottom: 12px; background: rgba(219, 0, 49, 0.05); border: 1px solid rgba(219, 0, 49, 0.2); border-radius: 6px; font-size: 11.5px;">
+                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                  <span>🏢 Workspaces: <strong id="mc-strip-workspaces">0</strong></span>
+                  <span>👥 Total Staff: <strong id="mc-strip-staff">0</strong></span>
+                  <span>📋 Total Tasks: <strong id="mc-strip-tasks">0 / 0</strong></span>
+                  <span>⏱️ Portfolio SLA: <strong id="mc-strip-sla">100%</strong></span>
+                </div>
+                <div style="font-family: var(--font-mono); font-size: 11px;">
+                  💰 Realized Portfolio: <strong id="mc-strip-revenue" style="color: var(--emerald);">LKR 0.00</strong>
+                </div>
+              </div>
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 24%;">Workspace</th>
-                      <th style="width: 9%; text-align: center;">Staff</th>
-                      <th style="width: 14%; text-align: center;">Tasks (Done/Total)</th>
-                      <th style="width: 11%; text-align: right;">On-Time %</th>
-                      <th style="width: 15%; text-align: right;">Stated Value</th>
-                      <th style="width: 15%; text-align: right;">Realized Revenue</th>
-                      <th style="width: 12%; text-align: center;">Realization</th>
+                      <th style="width: 23%;">Workspace &amp; Category</th>
+                      <th style="width: 8%; text-align: center;">Curr</th>
+                      <th style="width: 11%; text-align: center;">Staff</th>
+                      <th style="width: 13%; text-align: center;">Tasks (Done/All)</th>
+                      <th style="width: 9%; text-align: right;">On-Time</th>
+                      <th style="width: 13%; text-align: right;">Stated Value</th>
+                      <th style="width: 13%; text-align: right;">Realized Rev</th>
+                      <th style="width: 10%; text-align: center;">Grade</th>
                     </tr>
                   </thead>
                   <tbody id="report-multicompany-tbody"></tbody>
+                  <tfoot id="report-multicompany-tfoot"></tfoot>
                 </table>
               </div>
             </div>
 
-            <!-- REPORT 6: CONSOLIDATED MASTER DOSSIER (ALL SECTIONS) -->
+            <!-- REPORT 6: CONSOLIDATED MASTER DOSSIER (ALL SECTIONS 01-05) -->
             <div id="report-content-6" style="display: none;">
               <!-- Section 01 -->
               <div class="doc-section-heading">
@@ -786,6 +809,29 @@
                     </tr>
                   </thead>
                   <tbody id="report-dossier-aud-tbody"></tbody>
+                </table>
+              </div>
+
+              <!-- Section 05 -->
+              <div class="doc-section-heading" style="margin-top: 1.5rem;">
+                <span class="badge">SECTION 05</span> Multi-Company Workspace Summary
+              </div>
+              <div class="table-responsive">
+                <table class="data-table" style="table-layout: fixed; width: 100%;">
+                  <thead>
+                    <tr>
+                      <th style="width: 23%;">Workspace &amp; Category</th>
+                      <th style="width: 8%; text-align: center;">Curr</th>
+                      <th style="width: 11%; text-align: center;">Staff</th>
+                      <th style="width: 13%; text-align: center;">Tasks (Done/All)</th>
+                      <th style="width: 9%; text-align: right;">On-Time</th>
+                      <th style="width: 13%; text-align: right;">Stated Value</th>
+                      <th style="width: 13%; text-align: right;">Realized Rev</th>
+                      <th style="width: 10%; text-align: center;">Grade</th>
+                    </tr>
+                  </thead>
+                  <tbody id="report-dossier-mc-tbody"></tbody>
+                  <tfoot id="report-dossier-mc-tfoot"></tfoot>
                 </table>
               </div>
             </div>
@@ -1551,4 +1597,5 @@
        ========================================================================= -->
   <script src="/js/platform-app.js"></script>
 </body>
+
 </html>
