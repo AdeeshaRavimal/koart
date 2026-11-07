@@ -15,8 +15,8 @@
     href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/platform.css?v=20261107-6" />
-  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-6" />
+  <link rel="stylesheet" href="/css/platform.css?v=20261107-7" />
+  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-7" />
 </head>
 
 <body class="theme-dark">
@@ -455,16 +455,20 @@
               Week</button>
             <button class="report-filter-pill" id="pill-preset-month" onclick="setReportDatePreset('month')">This
               Month</button>
+            <button class="report-filter-pill" id="pill-preset-nextmonth" onclick="setReportDatePreset('nextmonth')">🗓️ Next
+              Month</button>
             <button class="report-filter-pill" id="pill-preset-lastmonth"
               onclick="setReportDatePreset('lastmonth')">Last Month</button>
             <button class="report-filter-pill active" id="pill-preset-all" onclick="setReportDatePreset('all')">All
               Time</button>
           </div>
 
-          <!-- Custom Date & Staff Filter (Auto-triggers on change) -->
+          <!-- Custom Month Picker, Date Range & Staff Filter (Auto-triggers on change) -->
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <input type="month" id="report-filter-month" class="form-control" onchange="applyReportMonthPicker(this.value)"
+              style="padding: 3px 8px; font-size: 11px; width: 132px; height: 28px;" title="Pick Any Month (including Future Months)" />
             <input type="date" id="report-filter-start" class="form-control" onchange="applyReportCustomFilter()"
-              style="padding: 3px 8px; font-size: 11px; width: 122px; height: 28px;" title="Start Date" />
+              style="padding: 3px 8px; font-size: 11px; width: 118px; height: 28px;" title="Start Date" />
             <span style="font-size: 11px; color: var(--text-dim);">to</span>
             <input type="date" id="report-filter-end" class="form-control" onchange="applyReportCustomFilter()"
               style="padding: 3px 8px; font-size: 11px; width: 122px; height: 28px;" title="End Date" />
@@ -705,28 +709,29 @@
             <div id="report-content-5" style="display: none;">
               <div id="mc-portfolio-summary-strip"
                 style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 14px; margin-bottom: 12px; background: rgba(219, 0, 49, 0.05); border: 1px solid rgba(219, 0, 49, 0.2); border-radius: 6px; font-size: 11.5px;">
-                <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
                   <span>🏢 Workspaces: <strong id="mc-strip-workspaces">0</strong></span>
-                  <span>👥 Total Staff: <strong id="mc-strip-staff">0</strong></span>
-                  <span>📋 Total Tasks: <strong id="mc-strip-tasks">0 / 0</strong></span>
-                  <span>⏱️ Portfolio SLA: <strong id="mc-strip-sla">100%</strong></span>
+                  <span>👥 Staff: <strong id="mc-strip-staff">0</strong></span>
+                  <span>📋 Tasks: <strong id="mc-strip-tasks">0 / 0</strong></span>
+                  <span>⏱️ SLA: <strong id="mc-strip-sla">100%</strong></span>
                 </div>
-                <div style="font-family: var(--font-mono); font-size: 11px;">
-                  💰 Realized Portfolio: <strong id="mc-strip-revenue" style="color: var(--emerald);">LKR 0.00</strong>
+                <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 11px;">
+                  <span>⏳ Wanted (Open/Future): <strong id="mc-strip-wanted" style="color: #f59e0b;">LKR 0.00</strong></span>
+                  <span>💰 Realized: <strong id="mc-strip-revenue" style="color: var(--emerald);">LKR 0.00</strong></span>
                 </div>
               </div>
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 23%;">Workspace &amp; Category</th>
-                      <th style="width: 8%; text-align: center;">Curr</th>
-                      <th style="width: 11%; text-align: center;">Staff</th>
-                      <th style="width: 13%; text-align: center;">Tasks (Done/All)</th>
-                      <th style="width: 9%; text-align: right;">On-Time</th>
-                      <th style="width: 13%; text-align: right;">Stated Value</th>
-                      <th style="width: 13%; text-align: right;">Realized Rev</th>
-                      <th style="width: 10%; text-align: center;">Grade</th>
+                      <th style="width: 22%;">Workspace &amp; Category</th>
+                      <th style="width: 7%; text-align: center;">Curr</th>
+                      <th style="width: 8%; text-align: center;">Staff</th>
+                      <th style="width: 12%; text-align: center;">Tasks (Done/All)</th>
+                      <th style="width: 14%; text-align: right;">Total Planned</th>
+                      <th style="width: 14%; text-align: right;">Wanted (Open)</th>
+                      <th style="width: 14%; text-align: right;">Realized (Done)</th>
+                      <th style="width: 9%; text-align: center;">SLA / Grade</th>
                     </tr>
                   </thead>
                   <tbody id="report-multicompany-tbody"></tbody>
@@ -827,14 +832,14 @@
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 23%;">Workspace &amp; Category</th>
-                      <th style="width: 8%; text-align: center;">Curr</th>
-                      <th style="width: 11%; text-align: center;">Staff</th>
-                      <th style="width: 13%; text-align: center;">Tasks (Done/All)</th>
-                      <th style="width: 9%; text-align: right;">On-Time</th>
-                      <th style="width: 13%; text-align: right;">Stated Value</th>
-                      <th style="width: 13%; text-align: right;">Realized Rev</th>
-                      <th style="width: 10%; text-align: center;">Grade</th>
+                      <th style="width: 22%;">Workspace &amp; Category</th>
+                      <th style="width: 7%; text-align: center;">Curr</th>
+                      <th style="width: 8%; text-align: center;">Staff</th>
+                      <th style="width: 12%; text-align: center;">Tasks (Done/All)</th>
+                      <th style="width: 14%; text-align: right;">Total Planned</th>
+                      <th style="width: 14%; text-align: right;">Wanted (Open)</th>
+                      <th style="width: 14%; text-align: right;">Realized (Done)</th>
+                      <th style="width: 9%; text-align: center;">SLA / Grade</th>
                     </tr>
                   </thead>
                   <tbody id="report-dossier-mc-tbody"></tbody>
@@ -1678,7 +1683,7 @@
         </div>
       </div>
 
-      <!-- Filter Tabs & Workspace Filter -->
+      <!-- Filter Tabs, Month Picker & Workspace Filter -->
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
         <div class="notif-filter-tabs" style="margin-bottom: 0;">
           <button type="button" class="notif-tab-pill active" id="notif-tab-open" onclick="setNotifFilterCategory('open')">
@@ -1701,9 +1706,31 @@
           </button>
         </div>
 
-        <select id="notif-company-filter" class="form-control" style="width: 175px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="renderAllCompaniesNotificationItems()">
-          <option value="">🏢 All Companies</option>
-        </select>
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+          <select id="notif-month-filter" class="form-control" style="width: 165px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="renderAllCompaniesNotificationItems()">
+            <option value="">📆 All Months</option>
+          </select>
+          <select id="notif-company-filter" class="form-control" style="width: 160px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="renderAllCompaniesNotificationItems()">
+            <option value="">🏢 All Companies</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ALL-COMPANIES & EACH-COMPANY BUDGET / WANTED SUMMARY PANEL -->
+      <div id="notif-company-budget-box"
+        style="margin-bottom: 12px; padding: 10px 12px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle);">
+          <div style="font-size: 11px; font-weight: 800; font-family: var(--font-mono); color: var(--text-main); text-transform: uppercase;">
+            💰 Budget &amp; Valuation Breakdown (<span id="notif-budget-scope-label">All Months</span>)
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 11px; display: flex; gap: 12px; flex-wrap: wrap;">
+            <span>⏳ All Companies Wanted (Open): <strong id="notif-grand-wanted" style="color: #f59e0b;">LKR 0.00</strong></span>
+            <span>📋 All Companies Total Planned: <strong id="notif-grand-planned" style="color: var(--emerald);">LKR 0.00</strong></span>
+          </div>
+        </div>
+        <div id="notif-each-company-breakdown" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px;">
+          <!-- Company-by-Company financial cards rendered via JS -->
+        </div>
       </div>
 
       <!-- Notification Cards List -->
@@ -1726,7 +1753,7 @@
   <!-- =========================================================================
        FRONTEND CLIENT SCRIPT (API Integration, State & Reactivity)
        ========================================================================= -->
-  <script src="/js/platform-app.js?v=20261107-6"></script>
+  <script src="/js/platform-app.js?v=20261107-7"></script>
 </body>
 
 </html>

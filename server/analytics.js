@@ -170,11 +170,11 @@ function generateReports(rawDb, companyId, options = {}) {
     }
   }
 
-  // Filter jobs by date range and employee
+  // Filter jobs by date range (using scheduled due date so future-month jobs match their target month) and employee
   const jobs = allJobs.filter(j => {
     if (employeeId && j.employee_id !== employeeId) return false;
     if (startMs > 0 || endMs !== Infinity) {
-      const d = new Date(j.created_at || j.start_date || j.current_due_date).getTime();
+      const d = new Date(j.current_due_date || j.start_date || j.created_at).getTime();
       if (d < startMs || d > endMs) return false;
     }
     return true;
@@ -351,10 +351,10 @@ function generateReports(rawDb, companyId, options = {}) {
     const compStaff = db.employees.filter(e => e.company_id === comp.id);
     let compJobs = db.jobs.filter(j => j.company_id === comp.id);
 
-    // Apply date range filter if specified
+    // Apply date range filter if specified (matches scheduled due date for future/monthly planning)
     if (startMs > 0 || endMs !== Infinity) {
       compJobs = compJobs.filter(j => {
-        const refMs = new Date(j.created_at || j.start_date || j.current_due_date).getTime();
+        const refMs = new Date(j.current_due_date || j.start_date || j.created_at).getTime();
         if (refMs < startMs || refMs > endMs) return false;
         return true;
       });

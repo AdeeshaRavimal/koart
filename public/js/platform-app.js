@@ -1368,39 +1368,81 @@
     // ------------------------------------------------------------------------
     // EXECUTIVE REPORTS & MANAGEMENT INTELLIGENCE SUITE
     // ------------------------------------------------------------------------
+    function formatLocalYMD(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
     function setReportDatePreset(preset) {
       reportState.preset = preset;
       const now = new Date();
 
-      ['today', 'week', 'month', 'lastmonth', 'all'].forEach(p => {
+      ['today', 'week', 'month', 'nextmonth', 'lastmonth', 'all'].forEach(p => {
         const btn = document.getElementById(`pill-preset-${p}`);
         if (btn) btn.classList.toggle('active', p === preset);
       });
 
+      const monthInput = document.getElementById('report-filter-month');
+
       if (preset === 'today') {
-        const ymd = now.toISOString().substring(0, 10);
+        const ymd = formatLocalYMD(now);
         reportState.startDate = ymd;
         reportState.endDate = ymd;
+        if (monthInput) monthInput.value = '';
       } else if (preset === 'week') {
         const d = new Date(now);
         const day = d.getDay() || 7;
         d.setDate(d.getDate() - day + 1);
-        reportState.startDate = d.toISOString().substring(0, 10);
-        reportState.endDate = now.toISOString().substring(0, 10);
+        reportState.startDate = formatLocalYMD(d);
+        reportState.endDate = formatLocalYMD(now);
+        if (monthInput) monthInput.value = '';
       } else if (preset === 'month') {
         const start = new Date(now.getFullYear(), now.getMonth(), 1);
         const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-        reportState.startDate = start.toISOString().substring(0, 10);
-        reportState.endDate = end.toISOString().substring(0, 10);
+        reportState.startDate = formatLocalYMD(start);
+        reportState.endDate = formatLocalYMD(end);
+        if (monthInput) monthInput.value = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+      } else if (preset === 'nextmonth') {
+        const start = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const end = new Date(now.getFullYear(), now.getMonth() + 2, 0);
+        reportState.startDate = formatLocalYMD(start);
+        reportState.endDate = formatLocalYMD(end);
+        if (monthInput) monthInput.value = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
       } else if (preset === 'lastmonth') {
         const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const end = new Date(now.getFullYear(), now.getMonth(), 0);
-        reportState.startDate = start.toISOString().substring(0, 10);
-        reportState.endDate = end.toISOString().substring(0, 10);
+        reportState.startDate = formatLocalYMD(start);
+        reportState.endDate = formatLocalYMD(end);
+        if (monthInput) monthInput.value = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
       } else {
         reportState.startDate = '';
         reportState.endDate = '';
+        if (monthInput) monthInput.value = '';
       }
+
+      const startInput = document.getElementById('report-filter-start');
+      const endInput = document.getElementById('report-filter-end');
+      if (startInput) startInput.value = reportState.startDate;
+      if (endInput) endInput.value = reportState.endDate;
+
+      loadReportsView();
+    }
+
+    function applyReportMonthPicker(monthVal) {
+      if (!monthVal || !/^\d{4}-\d{2}$/.test(monthVal)) {
+        setReportDatePreset('all');
+        return;
+      }
+      const [yr, mo] = monthVal.split('-').map(Number);
+      const start = new Date(yr, mo - 1, 1);
+      const end = new Date(yr, mo, 0);
+      reportState.startDate = formatLocalYMD(start);
+      reportState.endDate = formatLocalYMD(end);
+      reportState.preset = 'month-picker';
+
+      ['today', 'week', 'month', 'nextmonth', 'lastmonth', 'all'].forEach(p => {
+        const btn = document.getElementById(`pill-preset-${p}`);
+        if (btn) btn.classList.remove('active');
+      });
 
       const startInput = document.getElementById('report-filter-start');
       const endInput = document.getElementById('report-filter-end');
@@ -1420,7 +1462,7 @@
       reportState.employeeId = emp;
       reportState.preset = 'custom';
 
-      ['today', 'week', 'month', 'lastmonth', 'all'].forEach(p => {
+      ['today', 'week', 'month', 'nextmonth', 'lastmonth', 'all'].forEach(p => {
         const btn = document.getElementById(`pill-preset-${p}`);
         if (btn) btn.classList.remove('active');
       });
@@ -1432,6 +1474,8 @@
       reportState.employeeId = '';
       const staffSelect = document.getElementById('report-filter-staff');
       if (staffSelect) staffSelect.value = '';
+      const monthInput = document.getElementById('report-filter-month');
+      if (monthInput) monthInput.value = '';
       setReportDatePreset('all');
     }
 
@@ -1900,15 +1944,18 @@
       const stripStaff = document.getElementById('mc-strip-staff');
       const stripTasks = document.getElementById('mc-strip-tasks');
       const stripSla = document.getElementById('mc-strip-sla');
+      const stripWanted = document.getElementById('mc-strip-wanted');
       const stripRev = document.getElementById('mc-strip-revenue');
 
       const portfolioRealizedStr = formatPortfolioCurrencyMap(mcRollup.revenueByCurrency, 'realized');
       const portfolioStatedStr = formatPortfolioCurrencyMap(mcRollup.revenueByCurrency, 'stated');
+      const portfolioWantedStr = formatPortfolioCurrencyMap(mcRollup.revenueByCurrency, 'pipeline');
 
       if (stripWs) stripWs.textContent = mcRollup.totalWorkspaces || r5.length || 0;
       if (stripStaff) stripStaff.textContent = mcRollup.totalStaff || 0;
       if (stripTasks) stripTasks.textContent = `${mcRollup.completedJobs || 0} / ${mcRollup.totalJobs || 0} (${mcRollup.completionRate || 0}%)`;
       if (stripSla) stripSla.textContent = `${mcRollup.strictOnTimeRate || 100}%`;
+      if (stripWanted) stripWanted.textContent = portfolioWantedStr;
       if (stripRev) stripRev.textContent = portfolioRealizedStr;
 
       if (!r5.length) {
@@ -1922,6 +1969,7 @@
           const isCurrentWs = res.activeCompany && res.activeCompany.id === c.companyId;
           const activeBadge = isCurrentWs ? ' <span style="font-size:9px; color:var(--red); font-family:var(--font-mono);">(ACTIVE)</span>' : '';
           const staffListHint = (c.staffNames && c.staffNames.length) ? c.staffNames.join(', ') : 'No staff assigned';
+          const openJobsCount = Math.max(0, (c.totalJobs || 0) - (c.completedJobs || 0) - (c.stoppedJobs || 0));
           return `
             <tr>
               <td>
@@ -1932,16 +1980,19 @@
               <td style="text-align: center; font-family: var(--font-mono);">${c.staffCount}</td>
               <td style="text-align: center; font-family: var(--font-mono);">
                 <strong>${c.completedJobs}</strong> / ${c.totalJobs}
-                <span style="font-size:10px; color:var(--text-dim);">(${c.completionRate || 0}%)</span>
+                <div style="font-size:9.5px; color:var(--text-dim);">${openJobsCount} open · ${c.completionRate || 0}% done</div>
               </td>
-              <td style="text-align: right; font-family: var(--font-mono);">${c.strictOnTimeRate}%</td>
               <td style="text-align: right; font-family: var(--font-mono);">${formatLKR(c.statedValue, c.currency)}</td>
+              <td style="text-align: right; font-family: var(--font-mono);">
+                <strong style="color:#f59e0b;">${formatLKR(c.pipelineValue || 0, c.currency)}</strong>
+                <div style="font-size:9.5px; color:var(--text-dim);">${openJobsCount} open task(s)</div>
+              </td>
               <td style="text-align: right; font-family: var(--font-mono);">
                 <strong style="color:var(--emerald);">${formatLKR(c.realizedValue, c.currency)}</strong>
                 <div style="font-size:9.5px; color:var(--text-dim);">${c.realizationRate}% realized</div>
               </td>
               <td style="text-align: center;">
-                <span class="chip ${c.gradeClass || 'chip-muted'}">${c.grade || 'Healthy'}</span>
+                <span class="chip ${c.gradeClass || 'chip-muted'}">${c.strictOnTimeRate}% · ${c.grade || 'Healthy'}</span>
               </td>
             </tr>
           `;
@@ -1951,7 +2002,7 @@
           <tr style="background: rgba(219, 0, 49, 0.06); font-weight: 700; border-top: 2px solid var(--border-color);">
             <td>
               <div style="font-weight:800; color:var(--text-main);">PORTFOLIO TOTAL (${mcRollup.totalWorkspaces || r5.length} Workspaces)</div>
-              <div style="font-size:10px; color:var(--text-dim);">Consolidated Multi-Company Rollup</div>
+              <div style="font-size:10px; color:var(--text-dim);">Consolidated All-Companies Rollup</div>
             </td>
             <td style="text-align: center; font-family: var(--font-mono); font-size: 10px;">MULTI</td>
             <td style="text-align: center; font-family: var(--font-mono);"><strong>${mcRollup.totalStaff || 0}</strong></td>
@@ -1959,10 +2010,10 @@
               <strong>${mcRollup.completedJobs || 0}</strong> / ${mcRollup.totalJobs || 0}
               <span style="font-size:10px; color:var(--text-dim);">(${mcRollup.completionRate || 0}%)</span>
             </td>
-            <td style="text-align: right; font-family: var(--font-mono);"><strong>${mcRollup.strictOnTimeRate || 100}%</strong></td>
             <td style="text-align: right; font-family: var(--font-mono); font-size: 10.5px;">${portfolioStatedStr}</td>
+            <td style="text-align: right; font-family: var(--font-mono); font-size: 10.5px; color: #f59e0b;"><strong>${portfolioWantedStr}</strong></td>
             <td style="text-align: right; font-family: var(--font-mono); font-size: 10.5px; color: var(--emerald);"><strong>${portfolioRealizedStr}</strong></td>
-            <td style="text-align: center;"><span class="chip chip-green">${mcRollup.avgPortfolioScore || 0}% Avg</span></td>
+            <td style="text-align: center;"><span class="chip chip-green">${mcRollup.strictOnTimeRate || 100}% SLA · ${mcRollup.avgPortfolioScore || 0}%</span></td>
           </tr>
         `;
 
@@ -2361,6 +2412,48 @@
         }
       }
 
+      // Populate month filter dropdown inside notification modal (This Month, Next Month, +2 Months, + any month with tasks)
+      const monthSelect = document.getElementById('notif-month-filter');
+      if (monthSelect) {
+        const curMonthVal = monthSelect.value;
+        const now = new Date();
+        const toYM = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        const fmtYM = (ym) => {
+          const [y, m] = ym.split('-').map(Number);
+          const d = new Date(y, m - 1, 1);
+          return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        };
+
+        const thisYM = toYM(new Date(now.getFullYear(), now.getMonth(), 1));
+        const nextYM = toYM(new Date(now.getFullYear(), now.getMonth() + 1, 1));
+        const plus2YM = toYM(new Date(now.getFullYear(), now.getMonth() + 2, 1));
+
+        const monthCounts = {};
+        (res.items || []).forEach(it => {
+          if (it.dueMonth) {
+            monthCounts[it.dueMonth] = (monthCounts[it.dueMonth] || 0) + 1;
+          }
+        });
+
+        const fixedSet = new Set([thisYM, nextYM, plus2YM]);
+        const extraMonths = Object.keys(monthCounts)
+          .filter(ym => !fixedSet.has(ym))
+          .sort();
+
+        let monthOptionsHtml = `<option value="">📆 All Months (${(res.items || []).length} tasks)</option>`;
+        monthOptionsHtml += `<option value="${thisYM}">📅 This Month — ${fmtYM(thisYM)} (${monthCounts[thisYM] || 0} tasks)</option>`;
+        monthOptionsHtml += `<option value="${nextYM}">🗓️ Next Month — ${fmtYM(nextYM)} (${monthCounts[nextYM] || 0} tasks)</option>`;
+        monthOptionsHtml += `<option value="${plus2YM}">🗓️ +2 Months — ${fmtYM(plus2YM)} (${monthCounts[plus2YM] || 0} tasks)</option>`;
+        extraMonths.forEach(ym => {
+          monthOptionsHtml += `<option value="${ym}">📆 ${fmtYM(ym)} (${monthCounts[ym] || 0} tasks)</option>`;
+        });
+
+        monthSelect.innerHTML = monthOptionsHtml;
+        if (curMonthVal && Array.from(monthSelect.options).some(o => o.value === curMonthVal)) {
+          monthSelect.value = curMonthVal;
+        }
+      }
+
       const modalEl = document.getElementById('modal-all-notifications');
       if (forceRenderModal || (modalEl && modalEl.classList.contains('active'))) {
         renderAllCompaniesNotificationItems();
@@ -2391,6 +2484,13 @@
       renderAllCompaniesNotificationItems();
     }
 
+    function toggleNotifCompanyCardFilter(compId) {
+      const compFilterEl = document.getElementById('notif-company-filter');
+      if (!compFilterEl) return;
+      compFilterEl.value = (compFilterEl.value === compId) ? '' : compId;
+      renderAllCompaniesNotificationItems();
+    }
+
     function renderAllCompaniesNotificationItems() {
       const container = document.getElementById('notif-items-container');
       if (!container) return;
@@ -2403,10 +2503,136 @@
 
       const compFilterEl = document.getElementById('notif-company-filter');
       const selectedCompId = compFilterEl ? compFilterEl.value : '';
+      const monthFilterEl = document.getElementById('notif-month-filter');
+      const selectedMonth = monthFilterEl ? monthFilterEl.value : '';
       const cat = notifState.activeCategory || 'open';
 
+      // 1. Compute All-Companies & Each-Company Wanted / Planned Budget Breakdown for the selected Month
+      const monthScopedItems = data.items.filter(item => {
+        if (selectedMonth && item.dueMonth !== selectedMonth) return false;
+        return true;
+      });
+
+      const grandCurrencyMap = {};
+      const byCompanyMap = {};
+      (data.companies || []).forEach(c => {
+        byCompanyMap[c.id] = {
+          id: c.id,
+          name: c.name,
+          category: c.category || 'Workspace',
+          currency: (c.currency || 'LKR').toUpperCase(),
+          openCount: 0,
+          doneCount: 0,
+          totalCount: 0,
+          wantedValue: 0,
+          realizedValue: 0,
+          plannedValue: 0
+        };
+      });
+
+      monthScopedItems.forEach(item => {
+        const curr = (item.currency || 'LKR').toUpperCase();
+        const isDone = item.category === 'completed';
+        const val = Number(item.statedValue) || 0;
+
+        if (!grandCurrencyMap[curr]) {
+          grandCurrencyMap[curr] = { wanted: 0, planned: 0, realized: 0, openCount: 0, totalCount: 0 };
+        }
+        grandCurrencyMap[curr].planned += val;
+        grandCurrencyMap[curr].totalCount += 1;
+        if (!isDone) {
+          grandCurrencyMap[curr].wanted += val;
+          grandCurrencyMap[curr].openCount += 1;
+        } else {
+          grandCurrencyMap[curr].realized += val;
+        }
+
+        if (!byCompanyMap[item.companyId]) {
+          byCompanyMap[item.companyId] = {
+            id: item.companyId,
+            name: item.companyName,
+            category: item.companyCategory || 'Workspace',
+            currency: curr,
+            openCount: 0,
+            doneCount: 0,
+            totalCount: 0,
+            wantedValue: 0,
+            realizedValue: 0,
+            plannedValue: 0
+          };
+        }
+        const compEntry = byCompanyMap[item.companyId];
+        compEntry.totalCount += 1;
+        compEntry.plannedValue += val;
+        if (!isDone) {
+          compEntry.openCount += 1;
+          compEntry.wantedValue += val;
+        } else {
+          compEntry.doneCount += 1;
+          compEntry.realizedValue += val;
+        }
+      });
+
+      const fmtGrandMap = (field) => {
+        const entries = Object.entries(grandCurrencyMap);
+        if (!entries.length) return 'LKR 0';
+        return entries.map(([curr, obj]) => formatLKR(obj[field] || 0, curr)).join(' + ');
+      };
+
+      const scopeBadgeEl = document.getElementById('notif-budget-scope-label');
+      if (scopeBadgeEl) {
+        if (selectedMonth && monthFilterEl && monthFilterEl.selectedOptions[0]) {
+          scopeBadgeEl.textContent = `Month Scope: ${monthFilterEl.selectedOptions[0].textContent.replace(/^[^\w]+/, '')}`;
+        } else {
+          scopeBadgeEl.textContent = `Scope: All Scheduled Months (${monthScopedItems.length} Tasks)`;
+        }
+      }
+
+      const grandWantedEl = document.getElementById('notif-grand-wanted');
+      if (grandWantedEl) grandWantedEl.textContent = fmtGrandMap('wanted');
+
+      const grandPlannedEl = document.getElementById('notif-grand-planned');
+      if (grandPlannedEl) grandPlannedEl.textContent = fmtGrandMap('planned');
+
+      const eachCompContainer = document.getElementById('notif-each-company-breakdown');
+      if (eachCompContainer) {
+        const compList = Object.values(byCompanyMap);
+        if (!compList.length) {
+          eachCompContainer.innerHTML = '<div style="font-size: 11px; color: var(--text-dim);">No companies found.</div>';
+        } else {
+          eachCompContainer.innerHTML = compList.map(comp => {
+            const isSelected = selectedCompId === comp.id;
+            const borderStyle = isSelected
+              ? 'border: 1.5px solid var(--red); background: rgba(219, 0, 49, 0.08);'
+              : 'border: 1px solid var(--border-color); background: var(--bg-surface);';
+            return `
+              <div onclick="toggleNotifCompanyCardFilter('${comp.id}')" title="Click to filter task list by ${comp.name}" style="${borderStyle} border-radius: 7px; padding: 8px 10px; cursor: pointer; transition: all 0.15s ease;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px;">
+                  <span style="font-weight: 800; font-size: 12px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    🏢 ${comp.name}
+                  </span>
+                  <span style="font-family: var(--font-mono); font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted);">
+                    ${comp.currency} · ${comp.openCount} open / ${comp.totalCount} all
+                  </span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; margin-top: 2px;">
+                  <span style="color: var(--text-dim); font-size: 10px;">Wanted (Open):</span>
+                  <strong style="font-family: var(--font-mono); color: #f59e0b; font-size: 12.5px;">${formatLKR(comp.wantedValue, comp.currency)}</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10.5px; margin-top: 2px; padding-top: 2px; border-top: 1px dashed rgba(255,255,255,0.06);">
+                  <span style="color: var(--text-dim); font-size: 9.5px;">Total Planned:</span>
+                  <span style="font-family: var(--font-mono); color: var(--emerald); font-weight: 700;">${formatLKR(comp.plannedValue, comp.currency)}</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 2. Filter individual notification task cards
       const filtered = data.items.filter(item => {
         if (selectedCompId && item.companyId !== selectedCompId) return false;
+        if (selectedMonth && item.dueMonth !== selectedMonth) return false;
         if (cat === 'open') return item.category !== 'completed';
         if (cat === 'all') return true;
         return item.category === cat;
@@ -2414,7 +2640,7 @@
 
       const footerEl = document.getElementById('notif-footer-summary');
       if (footerEl) {
-        footerEl.textContent = `Showing ${filtered.length} task(s) across ${selectedCompId ? 'selected workspace' : (data.counts.totalWorkspaces + ' workspaces')}.`;
+        footerEl.textContent = `Showing ${filtered.length} task(s) across ${selectedCompId ? 'selected workspace' : (data.counts.totalWorkspaces + ' workspaces')}${selectedMonth ? (' in ' + selectedMonth) : ''}.`;
       }
 
       if (!filtered.length) {

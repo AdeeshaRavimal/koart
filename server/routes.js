@@ -1143,6 +1143,11 @@ async function handleApiRequest(req, res, url, body) {
         timeLabel = j.status === 'completed' ? '✓ Completed' : '🛑 Stopped';
       }
 
+      const dueObj = new Date(j.current_due_date || j.created_at);
+      const dueMonth = !isNaN(dueObj.getTime())
+        ? `${dueObj.getFullYear()}-${String(dueObj.getMonth() + 1).padStart(2, '0')}`
+        : '';
+
       return {
         id: j.id,
         jobCode: j.job_code,
@@ -1153,6 +1158,7 @@ async function handleApiRequest(req, res, url, body) {
         statedValue: Number(j.stated_value || 0),
         realizedValue: Number(j.realized_value || 0),
         currentDueDate: j.current_due_date,
+        dueMonth,
         createdAt: j.created_at,
         companyId: comp.id,
         companyName: comp.name,
