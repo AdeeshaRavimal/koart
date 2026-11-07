@@ -195,6 +195,24 @@ async function handleApiRequest(req, res, url, body) {
   // --------------------------------------------------------------------------
   // COMPANIES & MULTI-TENANCY
   // --------------------------------------------------------------------------
+  // Helper: Check if an employee is available in a given company (direct or shared across same owner's companies)
+  const isEmpInWorkspace = (emp, compId) => {
+    if (!emp || !compId) return false;
+    if (emp.company_id === compId) return true;
+    if (!emp.is_shared) return false;
+    const targetComp = db.data.companies.find(c => c.id === compId);
+    const homeComp = db.data.companies.find(c => c.id === emp.company_id);
+    if (targetComp && homeComp && targetComp.owner_id && homeComp.owner_id && targetComp.owner_id !== homeComp.owner_id) {
+      return false;
+    }
+    const scope = emp.shared_scope || 'all';
+    if (scope === 'all') return true;
+    if (scope === 'selected' && Array.isArray(emp.shared_company_ids)) {
+      return emp.shared_company_ids.includes(compId);
+    }
+    return false;
+  };
+
   if (method === 'GET' && pathname === '/api/companies') {
     const userCompanies = db.getCompaniesByOwner(currentUser.id);
     return jsonResponse(res, 200, {
@@ -204,7 +222,7 @@ async function handleApiRequest(req, res, url, body) {
       maxCompanies: currentUser.max_companies,
       canAddMore: userCompanies.length < (currentUser.max_companies || 1),
       companies: userCompanies.map(c => {
-        const staffCount = db.getEmployees(c.id).length;
+        const staffCount = db.data.employees.filter(e => isEmpInWorkspace(e, c.id)).length;
         const jobCount = db.getJobs(c.id).length;
         return {
           id: c.id,
@@ -264,16 +282,37 @@ async function handleApiRequest(req, res, url, body) {
   }
 
   // --------------------------------------------------------------------------
-  // EMPLOYEES CRUD
+  // EMPLOYEES CRUD & MULTI-COMPANY COMMON STAFF SHARING
   // --------------------------------------------------------------------------
   if (method === 'GET' && pathname === '/api/employees') {
     const activeOnly = url.searchParams.get('activeOnly') === 'true';
-    const staff = db.getEmployees(activeCompanyId, activeOnly);
+    const userCompanies = db.getCompaniesByOwner(currentUser.id);
+    const staff = db.data.employees.filter(e => {
+      if (!isEmpInWorkspace(e, activeCompanyId)) return false;
+      if (activeOnly && !e.is_active) return false;
+      return true;
+    });
     const jobs = db.getJobs(activeCompanyId);
 
     const detailed = staff.map(emp => {
       const empJobs = jobs.filter(j => j.employee_id === emp.id);
       const metrics = calculateEmployeeScore(empJobs);
+
+      const homeComp = db.data.companies.find(c => c.id === emp.company_id) || { name: 'Primary Workspace' };
+      const isShared = Boolean(emp.is_shared);
+      const sharedScope = isShared ? (emp.shared_scope === 'selected' ? 'selected' : 'all') : 'single';
+      const availableComps = userCompanies.filter(c => isEmpInWorkspace(emp, c.id));
+      const sharedCompanyIds = availableComps.map(c => c.id);
+      const sharedCompanyNames = availableComps.map(c => c.name);
+
+      // Cross-company active tasks (tasks in OTHER companies owned by this user)
+      const otherCompanyOpenJobs = (db.data.jobs || []).filter(j =>
+        j.employee_id === emp.id &&
+        j.company_id !== activeCompanyId &&
+        ['pending', 'assigned', 'in_progress', 'extended'].includes(j.status) &&
+        userCompanies.some(c => c.id === j.company_id)
+      );
+
       return {
         id: emp.id,
         employeeCode: emp.employee_code,
@@ -281,7 +320,14 @@ async function handleApiRequest(req, res, url, body) {
         roleTitle: emp.role_title,
         whatsappNumber: emp.whatsapp_number,
         isActive: emp.is_active,
+        homeCompanyId: emp.company_id,
+        homeCompanyName: homeComp.name,
+        isShared,
+        sharedScope,
+        sharedCompanyIds,
+        sharedCompanyNames,
         activeTasks: empJobs.filter(j => ['pending', 'assigned', 'in_progress', 'extended'].includes(j.status)).length,
+        otherCompanyActiveTasks: otherCompanyOpenJobs.length,
         completedTasks: metrics.totalCompleted,
         totalTasks: metrics.totalAssigned,
         productivityScore: metrics.compositeScore,
@@ -299,18 +345,34 @@ async function handleApiRequest(req, res, url, body) {
 
   if (method === 'POST' && pathname === '/api/employees') {
     try {
-      const { fullName, roleTitle, whatsappNumber, employeeCode } = body || {};
+      const { fullName, roleTitle, whatsappNumber, employeeCode, isShared, sharedScope, sharedCompanyIds } = body || {};
       if (!fullName || !whatsappNumber) {
         return errorResponse(res, 400, 'Full name and WhatsApp phone number are required.');
       }
+
+      const rawScope = sharedScope || (isShared ? 'all' : 'single');
+      const finalIsShared = rawScope === 'all' || rawScope === 'selected' || Boolean(isShared);
+      const finalScope = finalIsShared ? (rawScope === 'selected' ? 'selected' : 'all') : 'single';
+      const finalCompanyIds = finalIsShared
+        ? Array.from(new Set([activeCompanyId, ...(Array.isArray(sharedCompanyIds) ? sharedCompanyIds : [])].filter(Boolean)))
+        : [activeCompanyId];
 
       const created = db.createEmployee({
         company_id: activeCompanyId,
         employee_code: employeeCode,
         full_name: fullName,
         role_title: roleTitle || 'Operations Specialist',
-        whatsapp_number: whatsappNumber
+        whatsapp_number: whatsappNumber,
+        is_shared: finalIsShared,
+        shared_scope: finalScope,
+        shared_company_ids: finalCompanyIds
       });
+
+      // Ensure persistence even if db.js was loaded before hot-reload
+      created.is_shared = finalIsShared;
+      created.shared_scope = finalScope;
+      created.shared_company_ids = finalCompanyIds;
+      db.save();
 
       return jsonResponse(res, 201, {
         success: true,
@@ -318,6 +380,42 @@ async function handleApiRequest(req, res, url, body) {
       });
     } catch (err) {
       return errorResponse(res, 500, err.message);
+    }
+  }
+
+  // Update Employee & Multi-Company Sharing Scope
+  const matchEmpUpdate = pathname.match(/^\/api\/employees\/([^/]+)(?:\/sharing)?\/?$/);
+  if ((method === 'PATCH' || method === 'PUT' || method === 'POST') && matchEmpUpdate && !pathname.endsWith('/agenda') && !pathname.endsWith('/previous-tasks')) {
+    try {
+      const empId = matchEmpUpdate[1];
+      const emp = db.data.employees.find(e => e.id === empId);
+      if (!emp) return errorResponse(res, 404, 'Employee not found.');
+
+      const { fullName, roleTitle, whatsappNumber, isActive, isShared, sharedScope, sharedCompanyIds } = body || {};
+      if (fullName !== undefined && String(fullName).trim()) emp.full_name = String(fullName).trim();
+      if (roleTitle !== undefined && String(roleTitle).trim()) emp.role_title = String(roleTitle).trim();
+      if (whatsappNumber !== undefined && String(whatsappNumber).trim()) emp.whatsapp_number = String(whatsappNumber).trim();
+      if (isActive !== undefined) emp.is_active = Boolean(isActive);
+
+      if (sharedScope !== undefined || isShared !== undefined || sharedCompanyIds !== undefined) {
+        const rawScope = sharedScope !== undefined ? sharedScope : (isShared ? 'all' : 'single');
+        const finalIsShared = rawScope === 'all' || rawScope === 'selected' || (isShared === true && rawScope !== 'single');
+        emp.is_shared = finalIsShared;
+        emp.shared_scope = finalIsShared ? (rawScope === 'selected' ? 'selected' : 'all') : 'single';
+        const rawIds = Array.isArray(sharedCompanyIds) ? sharedCompanyIds : (Array.isArray(emp.shared_company_ids) ? emp.shared_company_ids : []);
+        emp.shared_company_ids = finalIsShared
+          ? Array.from(new Set([emp.company_id, ...rawIds].filter(Boolean)))
+          : [emp.company_id];
+      }
+
+      db.save();
+
+      return jsonResponse(res, 200, {
+        success: true,
+        employee: emp
+      });
+    } catch (err) {
+      return errorResponse(res, 400, err.message);
     }
   }
 
@@ -334,11 +432,10 @@ async function handleApiRequest(req, res, url, body) {
       employee_id: employeeId,
       priority
     });
-    const employees = db.getEmployees(activeCompanyId);
     const company = db.data.companies.find(c => c.id === activeCompanyId) || { name: 'KOart Platform', currency_code: 'LKR' };
 
     const enriched = jobs.map(j => {
-      const emp = employees.find(e => e.id === j.employee_id);
+      const emp = db.data.employees.find(e => e.id === j.employee_id);
       const waCard = buildWhatsAppJobCard({
         companyName: company.name,
         jobCode: j.job_code,
@@ -870,25 +967,35 @@ async function handleApiRequest(req, res, url, body) {
     });
   }
 
-  // Employee Daily Morning WhatsApp Agenda Dispatch
+  // Employee Daily Morning WhatsApp Agenda Dispatch (Supports Common Staff Across Multiple Companies)
   const matchAgenda = pathname.match(/^\/api\/employees\/([^/]+)\/agenda\/?$/);
   if (method === 'GET' && matchAgenda) {
     const employeeId = matchAgenda[1];
     const employee = db.data.employees.find(e => e.id === employeeId);
     if (!employee) return errorResponse(res, 404, 'Employee not found');
 
-    const company = db.data.companies.find(c => c.id === employee.company_id) || { name: 'KOart Platform', currency_code: 'LKR' };
+    const activeComp = db.data.companies.find(c => c.id === activeCompanyId) ||
+      db.data.companies.find(c => c.id === employee.company_id) ||
+      { name: 'KOart Platform', currency_code: 'LKR' };
 
-    const openTasks = db.data.jobs.filter(j => 
+    const openTasks = db.data.jobs.filter(j =>
       j.employee_id === employee.id &&
       j.status !== 'completed' &&
       j.status !== 'stopped'
     );
 
     const nowFormatted = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-    const totalCommittedVal = openTasks.reduce((sum, j) => sum + (Number(j.stated_value) || 0), 0);
+    const totalCommittedVal = openTasks
+      .filter(j => j.company_id === activeComp.id)
+      .reduce((sum, j) => sum + (Number(j.stated_value) || 0), 0);
 
-    let agendaText = `📋 *${company.name.toUpperCase()} · DAILY OPERATIONS BRIEFING*\n` +
+    const distinctCompanyIds = Array.from(new Set(openTasks.map(j => j.company_id)));
+    const isMultiCompBriefing = Boolean(employee.is_shared) || distinctCompanyIds.length > 1;
+    const headerTitle = isMultiCompBriefing
+      ? `MULTI-COMPANY DAILY OPERATIONS BRIEFING`
+      : `${activeComp.name.toUpperCase()} · DAILY OPERATIONS BRIEFING`;
+
+    let agendaText = `📋 *${headerTitle}*\n` +
       `📅 *Date:* ${nowFormatted}\n\n` +
       `Good Morning *${employee.full_name}*,\n` +
       `Here is your active operational agenda for today:\n\n`;
@@ -897,19 +1004,21 @@ async function handleApiRequest(req, res, url, body) {
       agendaText += `✓ *No outstanding tasks assigned for today!*\nAll commitments are currently clear. Stand by for new dispatches.\n`;
     } else {
       openTasks.forEach((t, idx) => {
+        const taskComp = db.data.companies.find(c => c.id === t.company_id) || activeComp;
         const dueD = new Date(t.current_due_date);
         const timeStr = dueD.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
         const dateStr = dueD.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const prioTag = t.priority === 'urgent' ? '🚨 URGENT' : (t.priority === 'high' ? '⚡ High Priority' : '📌 Normal Priority');
-        const valTag = t.include_value_on_wa ? ` | 💰 ${company.currency_code} ${Number(t.stated_value).toLocaleString('en-US')}` : '';
+        const valTag = t.include_value_on_wa ? ` | 💰 ${taskComp.currency_code} ${Number(t.stated_value).toLocaleString('en-US')}` : '';
+        const compTag = isMultiCompBriefing ? ` [${taskComp.name}]` : '';
 
-        agendaText += `*${idx + 1}. [${t.job_code}] ${t.title}*\n` +
+        agendaText += `*${idx + 1}. [${t.job_code}]${compTag} ${t.title}*\n` +
           `   • *Status:* ${t.status.toUpperCase()} | *Priority:* ${prioTag}\n` +
           `   • *Deadline:* ${dateStr}, ${timeStr}${valTag}\n` +
           (t.description ? `   • *Brief:* ${t.description.trim()}\n` : '') +
           `\n`;
       });
-      agendaText += `📊 *Summary:* ${openTasks.length} Active Task(s) | *Committed Valuation:* ${company.currency_code} ${totalCommittedVal.toLocaleString('en-US')}\n\n`;
+      agendaText += `📊 *Summary:* ${openTasks.length} Active Task(s) across ${Math.max(1, distinctCompanyIds.length)} company workspace(s)\n\n`;
       agendaText += `_Please acknowledge receipt of this briefing by replying to this message._`;
     }
 
@@ -920,7 +1029,7 @@ async function handleApiRequest(req, res, url, body) {
     db.data.job_audit_logs.push({
       id: crypto.randomUUID ? crypto.randomUUID() : 'agenda_' + Date.now(),
       job_id: openTasks.length > 0 ? openTasks[0].id : null,
-      company_id: employee.company_id,
+      company_id: activeComp.id || employee.company_id,
       action_type: 'agenda_dispatch',
       delay_fault: 'none',
       previous_due_date: null,
@@ -941,7 +1050,7 @@ async function handleApiRequest(req, res, url, body) {
       },
       taskCount: openTasks.length,
       totalCommitted: totalCommittedVal,
-      currency: company.currency_code,
+      currency: activeComp.currency_code,
       agendaText,
       waUrl
     });
@@ -956,15 +1065,27 @@ async function handleApiRequest(req, res, url, body) {
     const employee = db.data.employees.find(e => e.id === employeeId);
     if (!employee) return errorResponse(res, 404, 'Employee not found');
 
-    const company = db.data.companies.find(c => c.id === employee.company_id) || { name: 'KOart Platform', currency_code: 'LKR' };
+    const activeComp = db.data.companies.find(c => c.id === activeCompanyId) ||
+      db.data.companies.find(c => c.id === employee.company_id) ||
+      { name: 'KOart Platform', currency_code: 'LKR' };
+    const userCompanies = db.getCompaniesByOwner(currentUser.id);
+    const allowedCompanyIds = new Set(userCompanies.map(c => c.id));
 
-    // Get all jobs assigned to this employee across this company
-    const employeeJobs = (db.data.jobs || []).filter(j => j.employee_id === employee.id && j.company_id === employee.company_id);
+    // Get all jobs assigned to this employee in the active company (or across owner's companies if shared)
+    const employeeJobs = (db.data.jobs || []).filter(j =>
+      j.employee_id === employee.id &&
+      (j.company_id === activeCompanyId || (employee.is_shared && allowedCompanyIds.has(j.company_id)))
+    );
 
     // Group and deduplicate by trimmed lowercase title to identify recurrent task patterns
     const map = new Map();
-    // Sort chronological descending (most recent first)
-    const sorted = [...employeeJobs].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    // Sort so activeCompanyId jobs come first, then chronological descending
+    const sorted = [...employeeJobs].sort((a, b) => {
+      const aActive = a.company_id === activeCompanyId ? 1 : 0;
+      const bActive = b.company_id === activeCompanyId ? 1 : 0;
+      if (aActive !== bActive) return bActive - aActive;
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
 
     sorted.forEach(j => {
       const key = (j.title || '').trim().toLowerCase();
@@ -979,7 +1100,7 @@ async function handleApiRequest(req, res, url, body) {
           frequency: 1,
           lastAssigned: j.created_at,
           lastStatus: j.status,
-          currency: company.currency_code
+          currency: activeComp.currency_code
         });
       } else {
         const item = map.get(key);
@@ -1024,7 +1145,7 @@ async function handleApiRequest(req, res, url, body) {
         roleTitle: employee.role_title,
         employeeCode: employee.employee_code
       },
-      currency: company.currency_code,
+      currency: activeComp.currency_code,
       totalPreviousJobs: employeeJobs.length,
       recurrentTasks: recurrentTemplates,
       roleTemplates

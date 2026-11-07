@@ -15,8 +15,8 @@
     href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/platform.css?v=20261107-12" />
-  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-12" />
+  <link rel="stylesheet" href="/css/platform.css?v=20261107-13" />
+  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-13" />
 </head>
 
 <body class="theme-dark">
@@ -349,13 +349,21 @@
          ======================================================================= -->
     <div class="tab-view" id="view-staff">
       <div class="panel-card">
-        <div class="panel-header">
-          <div class="panel-title">
-            <span>👥</span> Staff Directory &amp; <span class="accent">WhatsApp Register</span>
+        <div class="panel-header" style="flex-wrap: wrap; gap: 10px;">
+          <div>
+            <div class="panel-title">
+              <span>👥</span> Staff Directory &amp; <span class="accent">Multi-Company Common Staff Register</span>
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 3px;" id="staff-directory-subtitle">
+              Manage single-workspace staff or share common staff members across multiple companies while keeping each company's job budgets 100% isolated.
+            </div>
           </div>
-          <button class="btn-action-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openAddStaffModal()">
-            + Register Staff Member
-          </button>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <span id="staff-common-count-badge" class="chip chip-blue" style="font-size: 11px; padding: 4px 10px;">🌐 0 Common Staff</span>
+            <button class="btn-action-primary" style="padding: 6px 14px; font-size: 12px;" onclick="openAddStaffModal()">
+              + Register Staff Member
+            </button>
+          </div>
         </div>
 
         <div class="table-responsive">
@@ -365,17 +373,18 @@
                 <th>Code</th>
                 <th>Employee Name</th>
                 <th>Designation / Role</th>
+                <th>Workspace Scope</th>
                 <th>WhatsApp Phone</th>
                 <th>Active Tasks</th>
                 <th>Delivered Value</th>
                 <th>Productivity Score</th>
                 <th>Status</th>
-                <th>Direct Dispatch</th>
+                <th>Direct Dispatch &amp; Sharing</th>
               </tr>
             </thead>
             <tbody id="staff-directory-tbody">
               <tr>
-                <td colspan="9" style="text-align:center; padding: 20px;">Loading staff...</td>
+                <td colspan="10" style="text-align:center; padding: 20px;">Loading staff...</td>
               </tr>
             </tbody>
           </table>
@@ -1583,12 +1592,12 @@
   </div>
 
   <!-- =========================================================================
-       MODAL 5: ADD STAFF MEMBER
+       MODAL 5: ADD STAFF MEMBER (WITH MULTI-COMPANY COMMON STAFF SCOPE)
        ========================================================================= -->
   <div class="modal-overlay" id="modal-add-staff">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width: 540px;">
       <div class="modal-header">
-        <h3 class="modal-title"><span>👤</span> Add Staff Member</h3>
+        <h3 class="modal-title"><span>👤</span> Register Staff Member</h3>
         <button class="btn-close-modal" onclick="closeModal('modal-add-staff')">✕</button>
       </div>
 
@@ -1606,9 +1615,102 @@
           <label class="form-label">WhatsApp Number (E.164 format) *</label>
           <input type="text" class="form-control" id="staff-phone" placeholder="+94771234567" required />
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+
+        <!-- MULTI-COMPANY COMMON STAFF SHARING SCOPE -->
+        <div class="form-group" style="background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 10px;">
+          <label class="form-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <span>🌐 Multi-Company Staff Sharing Scope</span>
+            <span style="font-size: 10px; font-family: var(--font-mono); color: #60a5fa;">COMMON STAFF POOL</span>
+          </label>
+          <select class="form-control" id="staff-shared-scope" onchange="onAddStaffScopeChange(this.value)" style="margin-bottom: 6px;">
+            <option value="single">🏢 Single Company Only (Current Workspace Only)</option>
+            <option value="all">🌐 Common Staff — Available Across All My Companies</option>
+            <option value="selected">🎯 Selected Companies — Choose Specific Workspaces</option>
+          </select>
+          <div style="font-size: 10.5px; color: var(--text-dim); line-height: 1.4;">
+            When shared as Common Staff, this employee can be assigned jobs in multiple companies while each job's cost and budget stays 100% isolated to the company that created it.
+          </div>
+
+          <!-- Checkboxes for 'selected' scope -->
+          <div id="add-staff-companies-picker" style="display: none; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(59, 130, 246, 0.25);">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+              Select Companies Where This Staff Member Works:
+            </div>
+            <div id="add-staff-companies-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto;"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;">
           <button type="button" class="btn-sm" onclick="closeModal('modal-add-staff')">Cancel</button>
           <button type="submit" class="btn-action-primary">✓ Register Staff Member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 5B: MANAGE STAFF MULTI-COMPANY SHARING & PROFILE
+       ========================================================================= -->
+  <div class="modal-overlay" id="modal-staff-sharing">
+    <div class="modal-box" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>🌐</span> Staff Sharing &amp; Multi-Company Scope</h3>
+        <button class="btn-close-modal" onclick="closeModal('modal-staff-sharing')">✕</button>
+      </div>
+
+      <form id="form-staff-sharing" onsubmit="handleSaveStaffSharing(event)">
+        <input type="hidden" id="edit-staff-id" />
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label class="form-label">Full Name *</label>
+            <input type="text" class="form-control" id="edit-staff-name" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Role / Designation *</label>
+            <input type="text" class="form-control" id="edit-staff-role" required />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 10px;">
+          <div class="form-group">
+            <label class="form-label">WhatsApp Number *</label>
+            <input type="text" class="form-control" id="edit-staff-phone" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Directory Status</label>
+            <select class="form-control" id="edit-staff-active">
+              <option value="true">🟢 Active</option>
+              <option value="false">🔴 Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="background: rgba(59, 130, 246, 0.07); border: 1px solid rgba(59, 130, 246, 0.28); border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 6px;">
+          <label class="form-label" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <span>🌐 Multi-Company Assignment Scope</span>
+            <span id="edit-staff-home-badge" style="font-size: 10px; font-family: var(--font-mono); color: #93c5fd;">Home: Workspace</span>
+          </label>
+          <select class="form-control" id="edit-staff-shared-scope" onchange="onEditStaffScopeChange(this.value)" style="margin-bottom: 8px;">
+            <option value="single">🏢 Single Company Only (Home Workspace Only)</option>
+            <option value="all">🌐 Common Staff — Share Across All My Companies</option>
+            <option value="selected">🎯 Selected Companies — Choose Specific Workspaces</option>
+          </select>
+          <div style="font-size: 10.5px; color: var(--text-dim); line-height: 1.4;">
+            Common Staff appear in the Staff Directory &amp; Task Assignment dropdowns of all selected companies. Each company's jobs and financial reports remain strictly separate.
+          </div>
+
+          <div id="edit-staff-companies-picker" style="display: none; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(59, 130, 246, 0.25);">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+              Select Companies Where This Staff Member Works:
+            </div>
+            <div id="edit-staff-companies-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto;"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;">
+          <button type="button" class="btn-sm" onclick="closeModal('modal-staff-sharing')">Cancel</button>
+          <button type="submit" class="btn-action-primary">✓ Save Sharing &amp; Staff Settings</button>
         </div>
       </form>
     </div>
@@ -1950,7 +2052,7 @@
   <!-- =========================================================================
        FRONTEND CLIENT SCRIPT (API Integration, State & Reactivity)
        ========================================================================= -->
-  <script src="/js/platform-app.js?v=20261107-12"></script>
+  <script src="/js/platform-app.js?v=20261107-13"></script>
 </body>
 
 </html>

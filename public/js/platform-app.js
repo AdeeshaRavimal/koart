@@ -417,12 +417,14 @@
       state.staff = employees; // Guarantees backwards and forwards state compatibility
 
       const staffFilterOptions = employees.map(e => `
-        <option value="${e.id}">${e.fullName} (${e.employeeCode})</option>
+        <option value="${e.id}">${e.isShared ? '🌐 ' : ''}${e.fullName} (${e.employeeCode})</option>
       `).join('');
 
-      const staffSelectOptions = employees.map(e => `
-        <option value="${e.id}">${e.fullName} (${e.roleTitle} · ${e.employeeCode})</option>
-      `).join('');
+      const staffSelectOptions = employees.map(e => {
+        const sharedTag = e.isShared ? ' · 🌐 Common Staff' : '';
+        const otherLoad = e.otherCompanyActiveTasks > 0 ? ` · +${e.otherCompanyActiveTasks} task in other Co.` : '';
+        return `<option value="${e.id}">${e.fullName} (${e.roleTitle} · ${e.employeeCode}${sharedTag}${otherLoad})</option>`;
+      }).join('');
 
       // 1. Operational Jobs Board Staff Filter
       const jobsStaffSelect = document.getElementById('filter-job-employee');
@@ -476,32 +478,70 @@
 
     function loadStaffTable() {
       const tbody = document.getElementById('staff-directory-tbody');
+      const commonBadge = document.getElementById('staff-common-count-badge');
+      const commonCount = (state.employees || []).filter(e => e.isShared).length;
+      if (commonBadge) {
+        commonBadge.textContent = `🌐 ${commonCount} Common Staff · ${(state.employees || []).length} Total in Workspace`;
+      }
+
       if (!state.employees.length) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 36px; color: var(--text-muted);">' +
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 36px; color: var(--text-muted);">' +
           '<div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">👥 Staff Directory is empty</div>' +
-          '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">Add your team members with their WhatsApp phone numbers for zero-friction task dispatch.</div>' +
+          '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">Add your team members with their WhatsApp phone numbers or share Common Staff across multiple companies.</div>' +
           '<button class="btn-action-primary" style="margin: 0 auto; font-size: 12px;" onclick="openAddStaffModal()">+ Register First Staff Member</button>' +
           '</td></tr>';
         return;
       }
 
-      tbody.innerHTML = state.employees.map(emp => `
+      tbody.innerHTML = state.employees.map(emp => {
+        const isShared = Boolean(emp.isShared);
+        const compNames = Array.isArray(emp.sharedCompanyNames) && emp.sharedCompanyNames.length
+          ? emp.sharedCompanyNames.join(', ')
+          : (emp.homeCompanyName || 'Current Workspace');
+
+        const scopeChipHtml = isShared
+          ? `<div style="cursor:pointer;" onclick="openStaffSharingModal('${emp.id}')" title="Click to manage which companies share this staff member">
+               <span class="chip chip-blue" style="font-size:10px;">🌐 ${emp.sharedScope === 'selected' ? `Shared (${(emp.sharedCompanyIds || []).length} Co.)` : 'Common · All Companies'}</span>
+               <div style="font-size:9.5px; color:var(--text-dim); margin-top:2px; max-width:170px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${compNames}</div>
+             </div>`
+          : `<div style="cursor:pointer;" onclick="openStaffSharingModal('${emp.id}')" title="Click to share this employee across multiple companies">
+               <span class="chip chip-muted" style="font-size:10px;">🏢 Single Company</span>
+               <div style="font-size:9.5px; color:var(--text-dim); margin-top:2px;">${emp.homeCompanyName || 'This Workspace Only'}</div>
+             </div>`;
+
+        const crossLoadHtml = emp.otherCompanyActiveTasks > 0
+          ? `<div style="font-size:9.5px; color:#c084fc; font-family:var(--font-mono); margin-top:2px;" title="Open tasks assigned to ${emp.fullName} in your other companies">+${emp.otherCompanyActiveTasks} in other Co.</div>`
+          : '';
+
+        return `
         <tr>
           <td><span style="font-family:var(--font-mono); font-weight:700;">${emp.employeeCode}</span></td>
-          <td><strong>${emp.fullName}</strong></td>
+          <td>
+            <strong>${emp.fullName}</strong>
+            ${isShared && emp.homeCompanyId && emp.homeCompanyId !== state.activeCompanyId
+              ? `<div style="font-size:9.5px; color:#60a5fa;">🌐 Home: ${emp.homeCompanyName || 'Shared'}</div>`
+              : ''}
+          </td>
           <td>${emp.roleTitle}</td>
+          <td>${scopeChipHtml}</td>
           <td><span style="font-family:var(--font-mono); font-size:11px;">${emp.whatsappNumber}</span></td>
-          <td><span class="chip ${emp.activeTasks > 0 ? 'chip-blue' : 'chip-muted'}">${emp.activeTasks} Active</span></td>
+          <td>
+            <span class="chip ${emp.activeTasks > 0 ? 'chip-blue' : 'chip-muted'}">${emp.activeTasks} Active</span>
+            ${crossLoadHtml}
+          </td>
           <td><strong>${formatLKR(emp.realizedValue)}</strong></td>
           <td><span class="chip ${emp.gradeClass}">${emp.productivityScore}% (${emp.grade})</span></td>
           <td><span class="chip ${emp.isActive ? 'chip-green' : 'chip-red'}">${emp.isActive ? 'Active' : 'Inactive'}</span></td>
           <td>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <div style="display:flex; gap:5px; flex-wrap:wrap;">
               <button class="btn-sm btn-action-primary" onclick="openNewJobForStaff('${emp.id}')" title="Assign New Task (with recurrent task templates)">
                 + Task
               </button>
-              <button class="btn-sm btn-wa" onclick="openStaffDailyAgenda('${emp.id}')" title="Generate & Send Daily Morning WhatsApp Agenda Briefing">
-                🌅 Daily Agenda
+              <button class="btn-sm" onclick="openStaffSharingModal('${emp.id}')" style="border-color:rgba(59,130,246,0.45); color:#93c5fd;" title="Configure Multi-Company Common Staff Sharing &amp; Profile">
+                🌐 Share
+              </button>
+              <button class="btn-sm btn-wa" onclick="openStaffDailyAgenda('${emp.id}')" title="Generate &amp; Send Daily Morning WhatsApp Agenda Briefing">
+                🌅 Agenda
               </button>
               <a href="https://wa.me/${emp.whatsappNumber.replace(/[^0-9]/g, '')}" target="_blank" class="btn-sm" style="text-decoration:none;" title="Open Direct WhatsApp Chat">
                 💬 Chat
@@ -509,7 +549,8 @@
             </div>
           </td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     }
 
     // ------------------------------------------------------------------------
@@ -2079,27 +2120,172 @@
       }
     }
 
+    function renderCompanyCheckboxesHtml(containerId, homeCompanyId, selectedIds = []) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const comps = state.companies || [];
+      const selectedSet = new Set([...(selectedIds || []), homeCompanyId]);
+
+      container.innerHTML = comps.map(c => {
+        const isHome = c.id === homeCompanyId;
+        const checked = selectedSet.has(c.id) ? 'checked' : '';
+        const disabled = isHome ? 'disabled' : '';
+        return `
+          <label style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 10px; border-radius:6px; background:rgba(15,23,42,0.55); border:1px solid var(--border-color); font-size:12px; cursor:${isHome ? 'default' : 'pointer'};">
+            <span style="display:flex; align-items:center; gap:8px;">
+              <input type="checkbox" class="staff-share-comp-cb" value="${c.id}" ${checked} ${disabled} style="accent-color:#3b82f6;" />
+              <strong>${c.name}</strong>
+              <span style="font-size:10.5px; color:var(--text-dim);">(${c.category || 'Workspace'} · ${c.currency || 'LKR'})</span>
+            </span>
+            ${isHome ? '<span class="chip chip-blue" style="font-size:9.5px; padding:1px 6px;">Primary Home</span>' : ''}
+          </label>
+        `;
+      }).join('');
+    }
+
+    function onAddStaffScopeChange(scope) {
+      const picker = document.getElementById('add-staff-companies-picker');
+      if (picker) {
+        picker.style.display = scope === 'selected' ? 'block' : 'none';
+      }
+      if (scope === 'selected') {
+        renderCompanyCheckboxesHtml('add-staff-companies-list', state.activeCompanyId, (state.companies || []).map(c => c.id));
+      }
+    }
+
     function openAddStaffModal() {
+      const scopeEl = document.getElementById('staff-shared-scope');
+      if (scopeEl) scopeEl.value = 'single';
+      const picker = document.getElementById('add-staff-companies-picker');
+      if (picker) picker.style.display = 'none';
+      renderCompanyCheckboxesHtml('add-staff-companies-list', state.activeCompanyId, [state.activeCompanyId]);
       openModal('modal-add-staff');
     }
 
     async function handleAddStaff(e) {
       e.preventDefault();
-      const fullName = document.getElementById('staff-name').value;
-      const roleTitle = document.getElementById('staff-role').value;
-      const whatsappNumber = document.getElementById('staff-phone').value;
+      const fullName = document.getElementById('staff-name').value.trim();
+      const roleTitle = document.getElementById('staff-role').value.trim();
+      const whatsappNumber = document.getElementById('staff-phone').value.trim();
+      const scopeEl = document.getElementById('staff-shared-scope');
+      const sharedScope = scopeEl ? scopeEl.value : 'single';
+      const isShared = sharedScope === 'all' || sharedScope === 'selected';
+
+      let sharedCompanyIds = [state.activeCompanyId];
+      if (sharedScope === 'all') {
+        sharedCompanyIds = (state.companies || []).map(c => c.id);
+      } else if (sharedScope === 'selected') {
+        const listEl = document.getElementById('add-staff-companies-list');
+        const checked = listEl ? Array.from(listEl.querySelectorAll('.staff-share-comp-cb:checked')).map(cb => cb.value) : [];
+        sharedCompanyIds = Array.from(new Set([state.activeCompanyId, ...checked]));
+      }
 
       const res = await apiRequest('/api/employees', 'POST', {
         fullName,
         roleTitle,
-        whatsappNumber
+        whatsappNumber,
+        isShared,
+        sharedScope,
+        sharedCompanyIds
       });
 
       if (res.success) {
         closeModal('modal-add-staff');
         document.getElementById('form-add-staff').reset();
+        await loadCompanies();
         await loadEmployeesList();
         loadStaffTable();
+        if (typeof showToast === 'function') {
+          showToast(isShared ? `🌐 Registered "${fullName}" as Common Staff across ${sharedScope === 'all' ? 'all companies' : sharedCompanyIds.length + ' companies'}!` : `✓ Registered "${fullName}" in current workspace.`);
+        }
+      }
+    }
+
+    function onEditStaffScopeChange(scope) {
+      const picker = document.getElementById('edit-staff-companies-picker');
+      if (picker) {
+        picker.style.display = scope === 'selected' ? 'block' : 'none';
+      }
+    }
+
+    function openStaffSharingModal(empId) {
+      const emp = (state.employees || []).find(e => e.id === empId);
+      if (!emp) return;
+
+      document.getElementById('edit-staff-id').value = emp.id;
+      document.getElementById('edit-staff-name').value = emp.fullName || '';
+      document.getElementById('edit-staff-role').value = emp.roleTitle || '';
+      document.getElementById('edit-staff-phone').value = emp.whatsappNumber || '';
+      document.getElementById('edit-staff-active').value = emp.isActive !== false ? 'true' : 'false';
+
+      const homeBadge = document.getElementById('edit-staff-home-badge');
+      if (homeBadge) {
+        homeBadge.textContent = `Home: ${emp.homeCompanyName || 'Primary Workspace'}`;
+      }
+
+      const scope = emp.isShared ? (emp.sharedScope === 'selected' ? 'selected' : 'all') : 'single';
+      const scopeEl = document.getElementById('edit-staff-shared-scope');
+      if (scopeEl) scopeEl.value = scope;
+
+      const homeCompId = emp.homeCompanyId || state.activeCompanyId;
+      const existingIds = Array.isArray(emp.sharedCompanyIds) && emp.sharedCompanyIds.length
+        ? emp.sharedCompanyIds
+        : [homeCompId];
+
+      renderCompanyCheckboxesHtml('edit-staff-companies-list', homeCompId, existingIds);
+      onEditStaffScopeChange(scope);
+      openModal('modal-staff-sharing');
+    }
+
+    async function handleSaveStaffSharing(e) {
+      e.preventDefault();
+      const empId = document.getElementById('edit-staff-id').value;
+      const emp = (state.employees || []).find(item => item.id === empId);
+      const homeCompId = (emp && emp.homeCompanyId) || state.activeCompanyId;
+
+      const fullName = document.getElementById('edit-staff-name').value.trim();
+      const roleTitle = document.getElementById('edit-staff-role').value.trim();
+      const whatsappNumber = document.getElementById('edit-staff-phone').value.trim();
+      const isActive = document.getElementById('edit-staff-active').value === 'true';
+      const sharedScope = document.getElementById('edit-staff-shared-scope').value;
+      const isShared = sharedScope === 'all' || sharedScope === 'selected';
+
+      let sharedCompanyIds = [homeCompId];
+      if (sharedScope === 'all') {
+        sharedCompanyIds = (state.companies || []).map(c => c.id);
+      } else if (sharedScope === 'selected') {
+        const listEl = document.getElementById('edit-staff-companies-list');
+        const checked = listEl ? Array.from(listEl.querySelectorAll('.staff-share-comp-cb:checked')).map(cb => cb.value) : [];
+        sharedCompanyIds = Array.from(new Set([homeCompId, ...checked]));
+      }
+
+      const payload = {
+        fullName,
+        roleTitle,
+        whatsappNumber,
+        isActive,
+        isShared,
+        sharedScope,
+        sharedCompanyIds
+      };
+
+      let res = await apiRequest(`/api/employees/${empId}`, 'PATCH', payload);
+      if (!res.success && res.error && res.error.includes('not found')) {
+        res = await apiRequest(`/api/employees/${empId}/sharing`, 'POST', payload);
+      }
+
+      if (res.success) {
+        closeModal('modal-staff-sharing');
+        await loadCompanies();
+        await loadEmployeesList();
+        loadStaffTable();
+        if (typeof showToast === 'function') {
+          showToast(isShared
+            ? `🌐 Updated "${fullName}" — now shared across ${sharedScope === 'all' ? 'all your companies' : sharedCompanyIds.length + ' companies'}!`
+            : `🏢 Updated "${fullName}" — set to single company workspace.`);
+        }
+      } else {
+        alert('Failed to update staff sharing settings: ' + (res.error || 'Unknown error'));
       }
     }
 

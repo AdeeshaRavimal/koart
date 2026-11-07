@@ -150,19 +150,48 @@ class PlatformDatabase {
   }
 
   // --------------------------------------------------------------------------
-  // Employees CRUD
+  // Employees CRUD & Multi-Company Common Staff Sharing
   // --------------------------------------------------------------------------
+  isEmployeeAvailableInCompany(emp, companyId) {
+    if (!emp || !companyId) return false;
+    if (emp.company_id === companyId) return true;
+    if (!emp.is_shared) return false;
+
+    const targetComp = this.getCompanyById(companyId);
+    const homeComp = this.getCompanyById(emp.company_id);
+    if (targetComp && homeComp && targetComp.owner_id && homeComp.owner_id && targetComp.owner_id !== homeComp.owner_id) {
+      return false;
+    }
+
+    const scope = emp.shared_scope || 'all';
+    if (scope === 'all') return true;
+    if (scope === 'selected' && Array.isArray(emp.shared_company_ids)) {
+      return emp.shared_company_ids.includes(companyId);
+    }
+    return false;
+  }
+
   getEmployees(companyId, activeOnly = false) {
     return this.data.employees.filter(e => {
-      if (e.company_id !== companyId) return false;
+      if (!this.isEmployeeAvailableInCompany(e, companyId)) return false;
       if (activeOnly && !e.is_active) return false;
       return true;
     });
   }
 
+  getEmployeeById(id) {
+    return this.data.employees.find(e => e.id === id);
+  }
+
   createEmployee(empData) {
-    const existing = this.getEmployees(empData.company_id);
+    const existing = this.data.employees.filter(e => e.company_id === empData.company_id);
     const code = empData.employee_code || `EMP-${String(existing.length + 1).padStart(2, '0')}`;
+
+    const rawScope = empData.shared_scope || (empData.is_shared ? 'all' : 'single');
+    const isShared = rawScope === 'all' || rawScope === 'selected' || Boolean(empData.is_shared);
+    const sharedScope = isShared ? (rawScope === 'selected' ? 'selected' : 'all') : 'single';
+    const rawIds = Array.isArray(empData.shared_company_ids) ? empData.shared_company_ids : [];
+    const sharedCompanyIds = Array.from(new Set([empData.company_id, ...rawIds].filter(Boolean)));
 
     const newEmp = {
       id: generateUUID(),
@@ -171,6 +200,9 @@ class PlatformDatabase {
       full_name: empData.full_name,
       role_title: empData.role_title,
       whatsapp_number: empData.whatsapp_number,
+      is_shared: isShared,
+      shared_scope: sharedScope,
+      shared_company_ids: sharedCompanyIds,
       is_active: empData.is_active !== undefined ? Boolean(empData.is_active) : true,
       created_at: new Date().toISOString()
     };
@@ -184,10 +216,28 @@ class PlatformDatabase {
     const idx = this.data.employees.findIndex(e => e.id === id);
     if (idx === -1) throw new Error('Employee not found');
 
-    this.data.employees[idx] = {
-      ...this.data.employees[idx],
+    const current = this.data.employees[idx];
+    const updated = {
+      ...current,
       ...empData
     };
+
+    if (empData.shared_scope !== undefined || empData.is_shared !== undefined || empData.shared_company_ids !== undefined) {
+      const rawScope = empData.shared_scope !== undefined
+        ? empData.shared_scope
+        : (empData.is_shared ? 'all' : (current.shared_scope || 'single'));
+      const isShared = rawScope === 'all' || rawScope === 'selected' || (empData.is_shared === true && rawScope !== 'single');
+      updated.is_shared = isShared;
+      updated.shared_scope = isShared ? (rawScope === 'selected' ? 'selected' : 'all') : 'single';
+      const baseIds = Array.isArray(empData.shared_company_ids)
+        ? empData.shared_company_ids
+        : (Array.isArray(current.shared_company_ids) ? current.shared_company_ids : []);
+      updated.shared_company_ids = isShared
+        ? Array.from(new Set([current.company_id, ...baseIds].filter(Boolean)))
+        : [current.company_id];
+    }
+
+    this.data.employees[idx] = updated;
     this.save();
     return this.data.employees[idx];
   }

@@ -146,8 +146,27 @@ function generateReports(rawDb, companyId, options = {}) {
   const company = companies.find(c => c.id === companyId) || companies[0];
   const activeCompanyId = company ? company.id : null;
 
-  const allEmployees = rawEmployees.filter(e => e.company_id === activeCompanyId);
+  const isEmpInCompany = (emp, targetCompId) => {
+    if (!emp || !targetCompId) return false;
+    if (emp.company_id === targetCompId) return true;
+    if (!emp.is_shared) return false;
+    const targetComp = companies.find(c => c.id === targetCompId);
+    const homeComp = companies.find(c => c.id === emp.company_id);
+    if (targetComp && homeComp && targetComp.owner_id && homeComp.owner_id && targetComp.owner_id !== homeComp.owner_id) {
+      return false;
+    }
+    const scope = emp.shared_scope || 'all';
+    if (scope === 'all') return true;
+    if (scope === 'selected' && Array.isArray(emp.shared_company_ids)) {
+      return emp.shared_company_ids.includes(targetCompId);
+    }
+    return false;
+  };
+
   const allJobs = rawJobs.filter(j => j.company_id === activeCompanyId);
+  const allEmployees = rawEmployees.filter(e =>
+    isEmpInCompany(e, activeCompanyId) || allJobs.some(j => j.employee_id === e.id)
+  );
   const allAuditLogs = rawAuditLogs.filter(a => a.company_id === activeCompanyId);
 
   // Date Range Parsing
@@ -340,7 +359,7 @@ function generateReports(rawDb, companyId, options = {}) {
     : db.companies;
 
   const revenueByCurrency = {};
-  let portfolioTotalStaff = 0;
+  const uniquePortfolioStaffIds = new Set();
   let portfolioTotalJobs = 0;
   let portfolioCompletedJobs = 0;
   let portfolioActiveJobs = 0;
@@ -348,7 +367,8 @@ function generateReports(rawDb, companyId, options = {}) {
   let portfolioStrictOnTimeJobs = 0;
 
   const multiCompanySummary = ownerCompanies.map(comp => {
-    const compStaff = db.employees.filter(e => e.company_id === comp.id);
+    const compStaff = db.employees.filter(e => isEmpInCompany(e, comp.id));
+    compStaff.forEach(s => uniquePortfolioStaffIds.add(s.id));
     let compJobs = db.jobs.filter(j => j.company_id === comp.id);
 
     // Apply date range filter if specified (matches scheduled due date for future/monthly planning)
@@ -414,7 +434,6 @@ function generateReports(rawDb, companyId, options = {}) {
     revenueByCurrency[curr].realized += compRealized;
     revenueByCurrency[curr].pipeline += compPipeline;
 
-    portfolioTotalStaff += compStaff.length;
     portfolioTotalJobs += compJobs.length;
     portfolioCompletedJobs += compDone;
     portfolioActiveJobs += compActive;
@@ -427,7 +446,7 @@ function generateReports(rawDb, companyId, options = {}) {
       category: comp.category || 'General Operations',
       currency: curr,
       staffCount: compStaff.length,
-      staffNames: compStaff.map(s => s.full_name),
+      staffNames: compStaff.map(s => s.is_shared ? `${s.full_name} (🌐)` : s.full_name),
       totalJobs: compJobs.length,
       completedJobs: compDone,
       activeJobs: compActive,
@@ -458,7 +477,7 @@ function generateReports(rawDb, companyId, options = {}) {
 
   const multiCompanyRollup = {
     totalWorkspaces: multiCompanySummary.length,
-    totalStaff: portfolioTotalStaff,
+    totalStaff: uniquePortfolioStaffIds.size,
     totalJobs: portfolioTotalJobs,
     completedJobs: portfolioCompletedJobs,
     activeJobs: portfolioActiveJobs,
