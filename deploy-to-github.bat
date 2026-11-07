@@ -6,17 +6,17 @@ echo ========================================================================
 echo   KOart Solutions - Push Operational Platform to GitHub (for Render)
 echo ========================================================================
 echo.
-echo Target Repository: https://github.com/AdeeshaRavimal/koart
+echo Target Repository: https://github.com/inkoartcontact-del/kooaert
 echo.
 
 if not exist .git (
   echo Initializing local Git repository...
   git init
   git branch -M main
-  git remote add origin https://github.com/AdeeshaRavimal/koart.git
+  git remote add origin https://github.com/inkoartcontact-del/kooaert.git
 ) else (
   echo Updating Git remote origin...
-  git remote set-url origin https://github.com/AdeeshaRavimal/koart.git
+  git remote set-url origin https://github.com/inkoartcontact-del/kooaert.git
 )
 
 echo.
@@ -42,3 +42,4 @@ if %ERRORLEVEL% equ 0 (
 
 echo.
 pause
+
