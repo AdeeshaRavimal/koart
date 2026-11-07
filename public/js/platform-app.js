@@ -1240,7 +1240,7 @@
       endDate: '',
       employeeId: '',
       orientation: 'portrait',
-      coverStyle: 'white',
+      coverStyle: 'none',
       cachedData: null
     };
 
@@ -1259,7 +1259,7 @@
         reportState.endDate = ymd;
       } else if (preset === 'week') {
         const d = new Date(now);
-        const day = d.getDay() || 7; // Monday as 1
+        const day = d.getDay() || 7;
         d.setDate(d.getDate() - day + 1);
         reportState.startDate = d.toISOString().substring(0, 10);
         reportState.endDate = now.toISOString().substring(0, 10);
@@ -1274,7 +1274,6 @@
         reportState.startDate = start.toISOString().substring(0, 10);
         reportState.endDate = end.toISOString().substring(0, 10);
       } else {
-        // all
         reportState.startDate = '';
         reportState.endDate = '';
       }
@@ -1323,29 +1322,29 @@
 
       const titleEl = document.getElementById('doc-report-title');
       const descEl = document.getElementById('doc-report-desc');
-      const refEl = document.getElementById('doc-ref-id');
+      const docRef = document.getElementById('doc-running-ref');
       const nowStr = new Date().toISOString().substring(0, 10).replace(/-/g, '');
 
-      if (refEl) refEl.textContent = `REF: KO-REP-${nowStr}-00${n}`;
+      if (docRef) docRef.textContent = `REF: KO-REP-${nowStr}-00${n}`;
 
       if (n === 1) {
-        if (titleEl) titleEl.textContent = 'Report 1: Staff Productivity & Leaderboard Audit';
-        if (descEl) descEl.innerHTML = 'Deterministic employee rankings computed via Fair Target Denominator N<sub>valid</sub>, Two-Tier Punctuality, and Efficiency Score.';
+        if (titleEl) titleEl.textContent = 'Report 1: Staff Performance Leaderboard';
+        if (descEl) descEl.textContent = 'Team productivity rankings based on completion rate, on-time delivery, and realized project value.';
       } else if (n === 2) {
-        if (titleEl) titleEl.textContent = 'Report 2: Job Financial Valuation & Realization Audit';
-        if (descEl) descEl.textContent = 'Itemized financial audit of planned stated value vs actual realized revenue, active pipeline capital, and loss exposure.';
+        if (titleEl) titleEl.textContent = 'Report 2: Revenue & Task Valuation Summary';
+        if (descEl) descEl.textContent = 'Financial breakdown of stated project valuations vs realized revenue and active work-in-progress.';
       } else if (n === 3) {
-        if (titleEl) titleEl.textContent = 'Report 3: Overdue Tasks, Extensions & Bottlenecks Audit';
-        if (descEl) descEl.textContent = 'Audit of all delayed commitments, original vs extended deadlines, days overdue, and fault attribution.';
+        if (titleEl) titleEl.textContent = 'Report 3: Overdue Tasks & Bottlenecks Audit';
+        if (descEl) descEl.textContent = 'Review of delayed tasks, deadline extensions, days overdue, and delay attribution (Staff vs Client).';
       } else if (n === 4) {
-        if (titleEl) titleEl.textContent = 'Report 4: WhatsApp Dispatch & Handler Audit Trail';
-        if (descEl) descEl.textContent = 'Immutable chronological audit log of all automated WhatsApp task cards, reminders, deadline extensions, and handler notes.';
+        if (titleEl) titleEl.textContent = 'Report 4: WhatsApp Dispatch & Activity Log';
+        if (descEl) descEl.textContent = 'Chronological log of all WhatsApp task dispatches, reminders, status updates, and executive notes.';
       } else if (n === 5) {
-        if (titleEl) titleEl.textContent = 'Report 5: Multi-Company Executive Overview';
-        if (descEl) descEl.textContent = 'Cross-organization operational audit comparing staff count, throughput, strict on-time SLA, and realized capital across entities.';
+        if (titleEl) titleEl.textContent = 'Report 5: Multi-Company Workspace Summary';
+        if (descEl) descEl.textContent = 'Cross-workspace comparison of team size, task completion, on-time delivery, and realized revenue.';
       } else if (n === 6) {
-        if (titleEl) titleEl.textContent = 'Consolidated Executive Operations Dossier (Master Audit)';
-        if (descEl) descEl.textContent = 'Complete end-to-end operational dossier combining Executive Scorecards, Staff Rankings, Financial Realization, and Bottleneck Audits.';
+        if (titleEl) titleEl.textContent = 'All-In-One Executive Operations Dossier';
+        if (descEl) descEl.textContent = 'Complete operational summary combining Staff Leaderboard, Revenue Realization, Bottlenecks, and Activity Logs.';
       }
     }
 
@@ -1387,7 +1386,7 @@
     }
 
     function changeReportCoverStyle(val) {
-      reportState.coverStyle = val || 'white';
+      reportState.coverStyle = val || 'none';
       const cover = document.getElementById('doc-cover-page');
       const coverSelect = document.getElementById('report-cover-style');
       if (coverSelect && coverSelect.value !== reportState.coverStyle) {
@@ -1408,42 +1407,14 @@
       }
     }
 
-    function toggleCoverPagePrint(isChecked) {
-      const cover = document.getElementById('doc-cover-page');
-      const badge = document.getElementById('cover-status-badge');
-      if (cover) {
-        cover.classList.toggle('hide-cover-in-print', !isChecked);
-      }
-      if (badge) {
-        badge.textContent = isChecked ? 'Cover Page Attached (Page 1 in PDF)' : 'Cover Page Omitted from PDF';
-        badge.style.color = isChecked ? 'var(--emerald)' : 'var(--text-dim)';
-      }
-    }
-
-    function toggleCoverOnScreen() {
-      const cover = document.getElementById('doc-cover-page');
-      const btn = document.getElementById('btn-toggle-cover-preview');
-      if (!cover) return;
-      const isVisible = cover.style.display !== 'none';
-      if (isVisible) {
-        cover.style.display = 'none';
-        if (btn) btn.textContent = '👁️ Preview Cover Page';
-      } else {
-        cover.style.display = 'flex';
-        if (btn) btn.textContent = '✕ Close Cover Preview';
-      }
-    }
-
     function printExecutiveReport() {
-      // 1. Ensure current user is stamped in signoff block
       const signoffEl = document.getElementById('doc-signoff-user');
       const directorName = state.user ? `${state.user.fullName} (Executive Director)` : 'Executive Director / Operations Lead';
       if (signoffEl) signoffEl.textContent = directorName;
 
-      // 2. Clone active report content and cover
       const orientation = reportState.orientation || 'portrait';
       const isLandscape = orientation === 'landscape';
-      const coverStyle = reportState.coverStyle || 'white';
+      const coverStyle = reportState.coverStyle || 'none';
       const includeCover = coverStyle !== 'none';
 
       const docCoverEl = document.getElementById('doc-cover-page');
@@ -1467,12 +1438,11 @@
         clonedDoc.classList.add('layout-landscape');
       }
 
-      // Build Dedicated Standalone Publication HTML Document (Suppresses browser URL/date stamps via margin:0)
       const printHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>KOart Solutions — Executive Operations Report &amp; Audit Dossier</title>
+  <title>KOart Solutions — Executive Operations Report</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -1485,14 +1455,13 @@
   </style>
 </head>
 <body>
-  <!-- Print Studio Floating Action Bar (Suppressed on Print) -->
   <div class="print-studio-toolbar">
     <div style="display: flex; align-items: center; gap: 14px;">
       <span style="font-weight: 800; font-family: 'Bricolage Grotesque', sans-serif; font-size: 15px; letter-spacing: -0.01em;">
         KOART <span style="color: #db0031;">STUDIO</span> · Executive PDF &amp; Print Publisher
       </span>
       <span style="font-size: 11px; color: #94a3b8; font-family: 'Space Mono', monospace; background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 4px;">
-        Format: A4 ${orientation.toUpperCase()} · ${coverStyle === 'none' ? 'No Cover' : (coverStyle === 'dark' ? 'Obsidian Cover' : 'Corporate White Cover')}
+        Format: A4 ${orientation.toUpperCase()} · ${coverStyle === 'none' ? 'Standard Single/Multi-Page' : (coverStyle === 'dark' ? 'With Dark Cover' : 'With White Cover')}
       </span>
     </div>
     <div style="display: flex; gap: 8px; align-items: center;">
@@ -1532,13 +1501,11 @@
         printWin.document.write(printHtml);
         printWin.document.close();
       } else {
-        // Fallback for popup blocker
         window.print();
       }
     }
 
     async function loadReportsView() {
-      // 1. Ensure staff list and dropdowns are populated
       if (!state.employees || !state.employees.length) {
         await loadEmployeesList();
       } else {
@@ -1549,7 +1516,6 @@
         staffSelect.value = reportState.employeeId;
       }
 
-      // 2. Fetch Filtered Reports from Backend
       const params = new URLSearchParams();
       if (reportState.startDate) params.append('startDate', reportState.startDate);
       if (reportState.endDate) params.append('endDate', reportState.endDate);
@@ -1560,20 +1526,16 @@
 
       reportState.cachedData = res;
 
-      // Update Document Metadata & Summary Badge
       const companyName = res.activeCompany ? res.activeCompany.name : 'Primary Workspace';
-      const companyCategory = res.activeCompany && res.activeCompany.category ? res.activeCompany.category : 'Digital Operations Practice';
+      const companyCategory = res.activeCompany && res.activeCompany.category ? res.activeCompany.category : 'Digital Operations';
       const currency = res.activeCompany ? res.activeCompany.currency : 'LKR';
       const kpis = res.executiveKPIs || {};
-
-      const wsEl = document.getElementById('doc-workspace-name');
-      if (wsEl) wsEl.textContent = companyName;
 
       const runningWs = document.getElementById('doc-running-ws');
       if (runningWs) runningWs.textContent = companyName;
 
       const userSignoff = document.getElementById('doc-signoff-user');
-      const directorName = state.user ? `${state.user.fullName} (Executive Director)` : 'Executive Director / Operations Lead';
+      const directorName = state.user ? `${state.user.fullName} (Executive Director)` : 'Executive Director';
       if (userSignoff) userSignoff.textContent = directorName;
 
       const genTimeEl = document.getElementById('doc-generated-time');
@@ -1581,8 +1543,7 @@
       const timeStr = `${now.toISOString().substring(0, 10)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
       if (genTimeEl) genTimeEl.textContent = timeStr;
 
-      // Date Scope Label
-      let scopeLabel = 'All Historical Records';
+      let scopeLabel = 'All Time';
       if (reportState.startDate && reportState.endDate) {
         scopeLabel = `${reportState.startDate} to ${reportState.endDate}`;
       } else if (reportState.startDate) {
@@ -1598,22 +1559,18 @@
         const staffList = state.employees || state.staff || [];
         const matched = reportState.employeeId ? staffList.find(s => s.id === reportState.employeeId) : null;
         const staffName = matched ? `${matched.fullName} (${matched.employeeCode})` : 'All Staff';
-        summaryChip.innerHTML = `<span>📅</span> Active Scope: <strong>${staffName}</strong> · <strong>${scopeLabel}</strong> · <strong>${kpis.totalJobs || 0} Tasks In Scope</strong>`;
+        summaryChip.innerHTML = `<span>📅</span> Active Scope: <strong>${staffName}</strong> · <strong>${scopeLabel}</strong> · <strong>${kpis.totalJobs || 0} Task(s)</strong>`;
       }
 
-      // Update Luxury Cover Page Elements
+      // Update Optional Cover Page Elements
       const covWs = document.getElementById('cover-meta-workspace');
       if (covWs) covWs.textContent = companyName;
-
       const covCat = document.getElementById('cover-meta-cat');
       if (covCat) covCat.textContent = companyCategory;
-
       const covDir = document.getElementById('cover-meta-director');
       if (covDir) covDir.textContent = state.user ? state.user.fullName : 'Executive Director';
-
       const covScope = document.getElementById('cover-meta-scope');
       if (covScope) covScope.textContent = scopeLabel;
-
       const covTasks = document.getElementById('cover-meta-tasks');
       if (covTasks) covTasks.textContent = `${kpis.totalJobs || 0} Tasks (${kpis.completedJobs || 0} Completed)`;
 
@@ -1623,31 +1580,20 @@
       if (covRef) covRef.textContent = refId;
       if (docRef) docRef.textContent = `REF: ${refId}`;
 
-      // 3. Render Executive KPI Scorecard Bar (Web View)
-      document.getElementById('rep-kpi-volume').textContent = `${kpis.completedJobs || 0} / ${kpis.totalJobs || 0}`;
-      document.getElementById('rep-kpi-comp-rate').textContent = `${kpis.completionRate || 0}% Completion Target`;
-
-      document.getElementById('rep-kpi-realized').textContent = formatLKR(kpis.totalRealizedValue || 0, currency);
-      document.getElementById('rep-kpi-stated').textContent = `Stated: ${formatLKR(kpis.totalStatedValue || 0, currency)} (${kpis.realizationRate || 0}%)`;
-
-      document.getElementById('rep-kpi-ontime').textContent = `${kpis.strictOnTimeRate || 0}%`;
-      document.getElementById('rep-kpi-ontime-sub').textContent = `${kpis.overdueJobs || 0} Currently Overdue`;
-
-      document.getElementById('rep-kpi-grade').textContent = kpis.healthGrade || 'Healthy';
-      document.getElementById('rep-kpi-score').innerHTML = `Composite S<sub>prod</sub>: <strong>${kpis.avgProductivityScore || 0}%</strong>`;
-
-      // 4. Render Document In-Page Scorecard & Progress Meters
+      // Render Single Unified Document Scorecard & Progress Meters
       const docVol = document.getElementById('doc-kpi-vol');
       if (docVol) docVol.textContent = `${kpis.completedJobs || 0} / ${kpis.totalJobs || 0}`;
       const meterVol = document.getElementById('doc-meter-vol');
       if (meterVol) meterVol.style.width = `${Math.min(100, Math.max(0, kpis.completionRate || 0))}%`;
       const docVolSub = document.getElementById('doc-kpi-vol-sub');
-      if (docVolSub) docVolSub.textContent = `${kpis.completionRate || 0}% Target Delivered`;
+      if (docVolSub) docVolSub.textContent = `${kpis.completionRate || 0}% Completion Rate`;
 
       const docVal = document.getElementById('doc-kpi-val');
       if (docVal) docVal.textContent = formatLKR(kpis.totalRealizedValue || 0, currency);
       const meterVal = document.getElementById('doc-meter-val');
       if (meterVal) meterVal.style.width = `${Math.min(100, Math.max(0, kpis.realizationRate || 0))}%`;
+      const docValSub = document.getElementById('doc-kpi-val-sub');
+      if (docValSub) docValSub.textContent = `Stated: ${formatLKR(kpis.totalStatedValue || 0, currency)} (${kpis.realizationRate || 0}%)`;
 
       const docOntime = document.getElementById('doc-kpi-ontime');
       if (docOntime) docOntime.textContent = `${kpis.strictOnTimeRate || 0}%`;
@@ -1660,117 +1606,115 @@
       if (cleanGrade.includes('Grade A+')) cleanGrade = 'Grade A+';
       if (docGrade) docGrade.textContent = cleanGrade;
       const docSub = document.getElementById('doc-kpi-sub');
-      if (docSub) docSub.innerHTML = `Score: <strong>${kpis.avgProductivityScore || 0}%</strong> · ${kpis.overdueJobs || 0} Overdue`;
+      if (docSub) docSub.innerHTML = `Avg Score: <strong>${kpis.avgProductivityScore || 0}%</strong> · ${kpis.overdueJobs || 0} Overdue`;
 
-      // 5. Render Report 1: Staff Leaderboard
+      // Render Report 1: Staff Leaderboard (8 Clean Columns)
       const lbTbody = document.getElementById('report-leaderboard-tbody');
       const dosLbTbody = document.getElementById('report-dossier-lb-tbody');
       const lbData = res.report1Leaderboard || [];
 
       if (!lbData.length) {
-        const emptyHtml = '<tr><td colspan="11" style="text-align:center; padding: 28px; color: var(--text-dim);">No staff performance records matching active filters.</td></tr>';
+        const emptyHtml = '<tr><td colspan="8" style="text-align:center; padding: 24px; color: var(--text-dim);">No staff performance records matching active filters.</td></tr>';
         if (lbTbody) lbTbody.innerHTML = emptyHtml;
         if (dosLbTbody) dosLbTbody.innerHTML = emptyHtml;
       } else {
         const lbRows = lbData.map((emp, idx) => `
           <tr>
-            <td style="text-align:center; white-space:nowrap;"><strong style="color:var(--red); font-family:var(--font-mono);">#${idx + 1}</strong></td>
-            <td style="font-weight:700;">${emp.fullName}</td>
-            <td>${emp.roleTitle}</td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;">${emp.totalAssigned}</td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;"><strong>${emp.totalCompleted}</strong></td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;">${emp.completionRate}%</td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;">${emp.strictOnTimeRate}%</td>
-            <td style="text-align: center; font-family: var(--font-mono); white-space:nowrap;">${emp.avgReminders}</td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;"><strong>${formatLKR(emp.realizedValue, currency)}</strong></td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;"><strong style="font-size:13px;">${emp.compositeScore}%</strong></td>
-            <td style="text-align: center; white-space:nowrap;"><span class="chip ${emp.gradeClass}">${emp.grade}</span></td>
+            <td style="text-align:center;"><strong style="color:var(--red); font-family:var(--font-mono);">#${idx + 1}</strong></td>
+            <td>
+              <div style="font-weight:700;">${emp.fullName}</div>
+              <div style="font-size:10.5px; color:var(--text-dim);">${emp.roleTitle || 'Staff'}</div>
+            </td>
+            <td style="text-align: center; font-family: var(--font-mono);">
+              <strong>${emp.totalCompleted}</strong> / ${emp.totalAssigned} <span style="font-size:10px; color:var(--text-dim);">(${emp.completionRate}%)</span>
+            </td>
+            <td style="text-align: right; font-family: var(--font-mono);">${emp.strictOnTimeRate}%</td>
+            <td style="text-align: center; font-family: var(--font-mono);">${emp.avgReminders}</td>
+            <td style="text-align: right; font-family: var(--font-mono);"><strong>${formatLKR(emp.realizedValue, currency)}</strong></td>
+            <td style="text-align: right; font-family: var(--font-mono);"><strong>${emp.compositeScore}%</strong></td>
+            <td style="text-align: center;"><span class="chip ${emp.gradeClass}">${emp.grade}</span></td>
           </tr>
         `).join('');
         if (lbTbody) lbTbody.innerHTML = lbRows;
         if (dosLbTbody) dosLbTbody.innerHTML = lbRows;
       }
 
-      // 6. Render Report 2: Job Value & Realization
+      // Render Report 2: Job Value & Realization (7 Clean Columns)
       const r2 = res.report2JobValue || {};
-      const r2Stated = document.getElementById('r2-stated');
-      if (r2Stated) r2Stated.textContent = formatLKR(r2.totalStatedValue || 0, currency);
-      const r2Real = document.getElementById('r2-realized');
-      if (r2Real) r2Real.textContent = formatLKR(r2.totalRealizedValue || 0, currency);
-      const r2Pipe = document.getElementById('r2-pipeline');
-      if (r2Pipe) r2Pipe.textContent = formatLKR(r2.activePipelineValue || 0, currency);
-      const r2Rate = document.getElementById('r2-rate');
-      if (r2Rate) r2Rate.textContent = `${r2.realizationRate || 0}%`;
-
       const valTbody = document.getElementById('report-val-tbody');
       const dosValTbody = document.getElementById('report-dossier-val-tbody');
       const valList = r2.jobsList || [];
 
       if (!valList.length) {
-        const emptyHtml = '<tr><td colspan="8" style="text-align:center; padding: 28px; color: var(--text-dim);">No job valuations recorded within this filter scope.</td></tr>';
+        const emptyHtml = '<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-dim);">No job valuations recorded within this filter scope.</td></tr>';
         if (valTbody) valTbody.innerHTML = emptyHtml;
         if (dosValTbody) dosValTbody.innerHTML = emptyHtml;
       } else {
         const valRows = valList.map(j => `
           <tr>
-            <td style="white-space:nowrap;"><strong style="color:var(--red); font-family:var(--font-mono);">${j.jobCode}</strong></td>
-            <td style="font-weight:700;">${j.title}</td>
-            <td>${j.employeeName}</td>
-            <td style="white-space:nowrap;"><span class="chip chip-${j.priority === 'urgent' ? 'red' : 'muted'}">${(j.priority || '').toUpperCase()}</span></td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;">${formatLKR(j.statedValue, currency)}</td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;"><strong style="color:var(--emerald);">${formatLKR(j.realizedValue, currency)}</strong></td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;">${j.variance >= 0 ? '+' : ''}${formatLKR(j.variance, currency)}</td>
-            <td style="white-space:nowrap;"><span class="chip chip-muted">${(j.status || '').toUpperCase()}</span></td>
+            <td><strong style="color:var(--red); font-family:var(--font-mono);">${j.jobCode}</strong></td>
+            <td>
+              <div style="font-weight:700;">${j.title}</div>
+              <div style="font-size:10.5px; color:var(--text-dim);">👤 ${j.employeeName}</div>
+            </td>
+            <td style="text-align:center;"><span class="chip chip-${j.priority === 'urgent' ? 'red' : 'muted'}">${(j.priority || '').toUpperCase()}</span></td>
+            <td style="text-align: right; font-family: var(--font-mono);">${formatLKR(j.statedValue, currency)}</td>
+            <td style="text-align: right; font-family: var(--font-mono);"><strong style="color:var(--emerald);">${formatLKR(j.realizedValue, currency)}</strong></td>
+            <td style="text-align: right; font-family: var(--font-mono);">${j.variance >= 0 ? '+' : ''}${formatLKR(j.variance, currency)}</td>
+            <td style="text-align:center;"><span class="chip chip-muted">${(j.status || '').toUpperCase()}</span></td>
           </tr>
         `).join('');
         if (valTbody) valTbody.innerHTML = valRows;
         if (dosValTbody) dosValTbody.innerHTML = valRows;
       }
 
-      // 7. Render Report 3: Overdue & Bottlenecks
+      // Render Report 3: Overdue & Bottlenecks (6 Clean Columns - No Clipping)
       const r3 = res.report3Bottlenecks || {};
       const btnTbody = document.getElementById('report-bottleneck-tbody');
       const dosBtnTbody = document.getElementById('report-dossier-bot-tbody');
       const botItems = r3.items || [];
 
       if (!botItems.length) {
-        const cleanHtml = '<tr><td colspan="8" style="text-align:center; padding: 28px; color: var(--emerald);">✓ Operational Excellence: Zero delayed tasks or bottleneck alerts in this filter scope.</td></tr>';
+        const cleanHtml = '<tr><td colspan="6" style="text-align:center; padding: 24px; color: var(--emerald);">✓ Zero delayed tasks or bottleneck alerts in this filter scope.</td></tr>';
         if (btnTbody) btnTbody.innerHTML = cleanHtml;
         if (dosBtnTbody) dosBtnTbody.innerHTML = cleanHtml;
       } else {
         const botRows = botItems.map(b => `
           <tr>
-            <td style="white-space:nowrap;"><strong style="color:var(--red); font-family:var(--font-mono);">${b.jobCode}</strong></td>
+            <td><strong style="color:var(--red); font-family:var(--font-mono);">${b.jobCode}</strong></td>
             <td style="font-weight:700;">${b.title}</td>
             <td>${b.employeeName}</td>
-            <td style="white-space:nowrap; font-family:var(--font-mono); font-size:11px;">${formatDate(b.originalDueDate)}</td>
-            <td style="white-space:nowrap; font-family:var(--font-mono); font-size:11px;">${formatDate(b.currentDueDate)}</td>
-            <td style="white-space:nowrap;"><span class="chip chip-red">${b.daysOverdueNow}d overdue</span></td>
-            <td style="white-space:nowrap;"><span class="chip ${b.primaryDelayFault === 'Internal Staff' ? 'chip-red' : 'chip-green'}">${b.primaryDelayFault}</span></td>
-            <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;"><strong>${b.followupCount}</strong> reminders</td>
+            <td style="text-align:center; font-family:var(--font-mono); font-size:10.5px;">
+              ${formatDate(b.originalDueDate)} → <strong>${formatDate(b.currentDueDate)}</strong>
+            </td>
+            <td style="text-align:center;"><span class="chip chip-red">${b.daysOverdueNow}d overdue</span></td>
+            <td style="text-align:center;">
+              <span class="chip ${b.primaryDelayFault === 'Internal Staff' ? 'chip-red' : 'chip-green'}">${b.primaryDelayFault}</span>
+              <div style="font-size:10px; color:var(--text-dim); margin-top:2px;">${b.followupCount} rem</div>
+            </td>
           </tr>
         `).join('');
         if (btnTbody) btnTbody.innerHTML = botRows;
         if (dosBtnTbody) dosBtnTbody.innerHTML = botRows;
       }
 
-      // 8. Render Report 4: Communication & WhatsApp Audit
+      // Render Report 4: Communication & WhatsApp Audit (5 Clean Columns)
       const r4 = res.report4AuditLog || {};
       const audTbody = document.getElementById('report-audit-tbody');
       const dosAudTbody = document.getElementById('report-dossier-aud-tbody');
       const audEvents = r4.events || [];
 
       if (!audEvents.length) {
-        const emptyHtml = '<tr><td colspan="5" style="text-align:center; padding: 28px; color: var(--text-dim);">No audit logs recorded for this period.</td></tr>';
+        const emptyHtml = '<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-dim);">No activity logs recorded for this period.</td></tr>';
         if (audTbody) audTbody.innerHTML = emptyHtml;
         if (dosAudTbody) dosAudTbody.innerHTML = emptyHtml;
       } else {
         const audRows = audEvents.map(a => `
           <tr>
-            <td style="white-space:nowrap;"><span style="font-family:var(--font-mono); font-size:11px;">${formatDate(a.createdAt)}</span></td>
-            <td style="white-space:nowrap;"><strong style="color:var(--red); font-family:var(--font-mono);">${a.jobCode}</strong></td>
-            <td style="white-space:nowrap;"><span class="chip chip-muted">${(a.actionType || '').toUpperCase()}</span></td>
-            <td style="white-space:nowrap;"><span class="chip ${a.delayFault === 'staff' ? 'chip-red' : (a.delayFault === 'client' ? 'chip-green' : 'chip-muted')}">${a.delayFault || 'none'}</span></td>
+            <td><span style="font-family:var(--font-mono); font-size:10.5px;">${formatDate(a.createdAt)}</span></td>
+            <td><strong style="color:var(--red); font-family:var(--font-mono);">${a.jobCode}</strong></td>
+            <td><span class="chip chip-muted">${(a.actionType || '').toUpperCase()}</span></td>
+            <td style="text-align:center;"><span class="chip ${a.delayFault === 'staff' ? 'chip-red' : (a.delayFault === 'client' ? 'chip-green' : 'chip-muted')}">${a.delayFault || 'none'}</span></td>
             <td>${a.handlerNote || 'Task event processed.'}</td>
           </tr>
         `).join('');
@@ -1778,24 +1722,25 @@
         if (dosAudTbody) dosAudTbody.innerHTML = audRows;
       }
 
-      // 9. Render Report 5: Multi-Company Summary
+      // Render Report 5: Multi-Company Summary (7 Clean Columns)
       const r5 = res.report5MultiCompany || [];
       const mcTbody = document.getElementById('report-multicompany-tbody');
       if (mcTbody) {
         if (!r5.length) {
-          mcTbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 28px; color: var(--text-dim);">No multi-company entities provisioned under this controller account.</td></tr>';
+          mcTbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-dim);">No workspaces provisioned under this account.</td></tr>';
         } else {
           mcTbody.innerHTML = r5.map(c => `
             <tr>
-              <td><strong>${c.companyName}</strong></td>
-              <td>${c.category}</td>
-              <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;">${c.staffCount}</td>
-              <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;">${c.totalJobs}</td>
-              <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;"><strong>${c.completedJobs}</strong></td>
-              <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;">${c.strictOnTimeRate}%</td>
-              <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;">${formatLKR(c.statedValue, c.currency)}</td>
-              <td style="text-align: right; font-family: var(--font-mono); white-space:nowrap;"><strong style="color:var(--emerald);">${formatLKR(c.realizedValue, c.currency)}</strong></td>
-              <td style="text-align: center; white-space:nowrap;"><span class="chip chip-green">${c.realizationRate}%</span></td>
+              <td>
+                <div style="font-weight:700;">${c.companyName}</div>
+                <div style="font-size:10.5px; color:var(--text-dim);">${c.category}</div>
+              </td>
+              <td style="text-align: center; font-family: var(--font-mono);">${c.staffCount}</td>
+              <td style="text-align: center; font-family: var(--font-mono);"><strong>${c.completedJobs}</strong> / ${c.totalJobs}</td>
+              <td style="text-align: right; font-family: var(--font-mono);">${c.strictOnTimeRate}%</td>
+              <td style="text-align: right; font-family: var(--font-mono);">${formatLKR(c.statedValue, c.currency)}</td>
+              <td style="text-align: right; font-family: var(--font-mono);"><strong style="color:var(--emerald);">${formatLKR(c.realizedValue, c.currency)}</strong></td>
+              <td style="text-align: center;"><span class="chip chip-green">${c.realizationRate}%</span></td>
             </tr>
           `).join('');
         }

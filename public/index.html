@@ -376,249 +376,173 @@
          VIEW 5: EXECUTIVE REPORTS & LEADERBOARD
          ======================================================================= -->
     <div class="tab-view" id="view-reports">
-      <!-- Executive Control Console & Filtering Toolbar -->
+      <!-- Streamlined Executive Control Console & Filtering Toolbar -->
       <div class="report-console-card">
-        <div class="panel-header" style="margin-bottom: 1rem;">
+        <div class="panel-header" style="margin-bottom: 0.85rem;">
           <div>
             <div class="panel-title" style="font-size: 17px;">
-              <span>📈</span> Executive Management Intelligence &amp; <span class="accent">5 Core Reports</span>
+              <span>📈</span> Performance &amp; <span class="accent">Financial Reports</span>
             </div>
-            <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 3px;">
-              Audited via deterministic Section 6 mathematical scoring formulas (Fair Target N<sub>valid</sub>, Two-Tier
-              Punctuality, S<sub>prod</sub>)
+            <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 2px;">
+              Staff performance rankings, revenue realization, overdue bottlenecks, and WhatsApp activity logs.
             </div>
           </div>
-          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-            <!-- Document Format Options -->
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <span style="font-size: 11px; color: var(--text-dim);">Layout:</span>
-              <select id="report-page-orientation" class="form-control" onchange="changeReportOrientation(this.value)"
-                style="padding: 3px 8px; font-size: 11px; width: 145px; height: 30px;">
-                <option value="portrait" selected>📄 Portrait (Standard)</option>
-                <option value="landscape">📑 Landscape (Wide View)</option>
-              </select>
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <span style="font-size: 11px; color: var(--text-dim);">Cover:</span>
-              <select id="report-cover-style" class="form-control" onchange="changeReportCoverStyle(this.value)"
-                style="padding: 3px 8px; font-size: 11px; width: 175px; height: 30px;">
-                <option value="white" selected>📄 Corporate White (Print)</option>
-                <option value="dark">🌑 Obsidian Dark (Screen)</option>
-                <option value="none">🚫 Omit Cover Sheet</option>
-              </select>
-            </div>
-            <button class="btn-action-primary" style="padding: 6px 14px; font-size: 11.5px; gap: 5px;"
-              onclick="loadReportsView()" title="Compute and render live document">
-              ⚡ Generate Report
-            </button>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            <select id="report-page-orientation" class="form-control" onchange="changeReportOrientation(this.value)"
+              style="padding: 3px 8px; font-size: 11px; width: 120px; height: 30px;" title="PDF Page Orientation">
+              <option value="portrait" selected>📄 Portrait</option>
+              <option value="landscape">📑 Landscape</option>
+            </select>
+            <select id="report-cover-style" class="form-control" onchange="changeReportCoverStyle(this.value)"
+              style="padding: 3px 8px; font-size: 11px; width: 135px; height: 30px;" title="PDF Cover Page Style">
+              <option value="none" selected>🚫 No Cover Page</option>
+              <option value="white">📄 White Cover</option>
+              <option value="dark">🌑 Dark Cover</option>
+            </select>
             <button class="btn-action-primary"
-              style="padding: 6px 16px; font-size: 11.5px; gap: 6px; background: #059669; border-color: #059669;"
-              onclick="printExecutiveReport()" title="Open dedicated A4 Print & PDF Studio">
-              🖨️ Print / Save PDF
+              style="padding: 6px 14px; font-size: 11.5px; gap: 5px; background: #059669; border-color: #059669;"
+              onclick="printExecutiveReport()" title="Open A4 Print & PDF Publisher">
+              🖨️ Print / PDF
             </button>
-            <button class="btn-sm" onclick="exportReportsCSV()"
-              title="Download tabular data as clean RFC-4180 CSV / Excel file">
-              📥 Excel / CSV
+            <button class="btn-sm" onclick="exportReportsCSV()" style="height: 30px;"
+              title="Download current report as Excel / CSV file">
+              📥 Export CSV
             </button>
           </div>
         </div>
 
         <!-- Master Report Type Switcher Tabs -->
-        <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 0.85rem;">
+        <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 0.75rem;">
           <button class="report-tab-pill active" id="btn-rep-1" onclick="switchReportTab(1)">
             <span>🏆</span> 1. Staff Leaderboard
           </button>
           <button class="report-tab-pill" id="btn-rep-2" onclick="switchReportTab(2)">
-            <span>💰</span> 2. Value &amp; Realization
+            <span>💰</span> 2. Revenue &amp; Valuation
           </button>
           <button class="report-tab-pill" id="btn-rep-3" onclick="switchReportTab(3)">
             <span>🚨</span> 3. Overdue &amp; Bottlenecks
           </button>
           <button class="report-tab-pill" id="btn-rep-4" onclick="switchReportTab(4)">
-            <span>💬</span> 4. WhatsApp Audit Trail
+            <span>💬</span> 4. WhatsApp Activity Log
           </button>
           <button class="report-tab-pill" id="btn-rep-5" onclick="switchReportTab(5)">
-            <span>🏢</span> 5. Multi-Company Overview
+            <span>🏢</span> 5. Company Summary
           </button>
           <button class="report-tab-pill" id="btn-rep-6" onclick="switchReportTab(6)"
             style="border-color: var(--red-border);">
-            <span>📑</span> 6. Consolidated Dossier (All-In-One)
+            <span>📑</span> All-In-One Dossier
           </button>
         </div>
 
-        <!-- Filter Controls Bar -->
+        <!-- Streamlined Auto-Updating Filter Bar -->
         <div class="report-filter-bar">
           <!-- Time Presets -->
-          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-            <span
-              style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">
+          <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+            <span style="font-size: 10.5px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">
               Period:
             </span>
-            <button class="report-filter-pill" id="pill-preset-today" onclick="setReportDatePreset('today')">⚡
-              Today</button>
-            <button class="report-filter-pill" id="pill-preset-week" onclick="setReportDatePreset('week')">📅 This
-              Week</button>
-            <button class="report-filter-pill" id="pill-preset-month" onclick="setReportDatePreset('month')">🗓️ This
-              Month</button>
-            <button class="report-filter-pill" id="pill-preset-lastmonth" onclick="setReportDatePreset('lastmonth')">⏪
-              Last Month</button>
-            <button class="report-filter-pill active" id="pill-preset-all" onclick="setReportDatePreset('all')">🌐 All
-              Time</button>
+            <button class="report-filter-pill" id="pill-preset-today" onclick="setReportDatePreset('today')">Today</button>
+            <button class="report-filter-pill" id="pill-preset-week" onclick="setReportDatePreset('week')">This Week</button>
+            <button class="report-filter-pill" id="pill-preset-month" onclick="setReportDatePreset('month')">This Month</button>
+            <button class="report-filter-pill" id="pill-preset-lastmonth" onclick="setReportDatePreset('lastmonth')">Last Month</button>
+            <button class="report-filter-pill active" id="pill-preset-all" onclick="setReportDatePreset('all')">All Time</button>
           </div>
 
-          <!-- Custom Date & Staff Filter -->
-          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <span style="font-size: 11px; color: var(--text-dim);">From:</span>
-              <input type="date" id="report-filter-start" class="form-control"
-                style="padding: 4px 8px; font-size: 11px; width: 125px; height: 30px;" />
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <span style="font-size: 11px; color: var(--text-dim);">To:</span>
-              <input type="date" id="report-filter-end" class="form-control"
-                style="padding: 4px 8px; font-size: 11px; width: 125px; height: 30px;" />
-            </div>
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <span style="font-size: 11px; color: var(--text-dim);">Staff:</span>
-              <select id="report-filter-staff" class="form-control"
-                style="padding: 4px 8px; font-size: 11px; width: 160px; height: 30px;"
-                onchange="applyReportCustomFilter()">
-                <option value="">All Staff</option>
-              </select>
-            </div>
-            <button class="btn-action-primary" style="padding: 4px 10px; font-size: 11px; height: 30px;"
-              onclick="applyReportCustomFilter()">
-              Apply Filter
-            </button>
-            <button class="btn-sm" style="padding: 4px 8px; font-size: 11px; height: 30px;"
-              onclick="resetReportFilter()">
-              Reset
+          <!-- Custom Date & Staff Filter (Auto-triggers on change) -->
+          <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <input type="date" id="report-filter-start" class="form-control" onchange="applyReportCustomFilter()"
+              style="padding: 3px 8px; font-size: 11px; width: 122px; height: 28px;" title="Start Date" />
+            <span style="font-size: 11px; color: var(--text-dim);">to</span>
+            <input type="date" id="report-filter-end" class="form-control" onchange="applyReportCustomFilter()"
+              style="padding: 3px 8px; font-size: 11px; width: 122px; height: 28px;" title="End Date" />
+            <select id="report-filter-staff" class="form-control"
+              style="padding: 3px 8px; font-size: 11px; width: 155px; height: 28px;"
+              onchange="applyReportCustomFilter()">
+              <option value="">All Staff Members</option>
+            </select>
+            <button class="btn-sm" style="padding: 3px 8px; font-size: 11px; height: 28px;"
+              onclick="resetReportFilter()" title="Reset all filters">
+              ✕ Reset
             </button>
           </div>
         </div>
 
-        <!-- Filter Scope Indicator Chip -->
-        <div
-          style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
+        <!-- Active Filter Summary Line -->
+        <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
           <div id="report-filter-summary-chip">
-            <span>📅</span> Active Scope: <strong>All Staff</strong> · <strong>All Time</strong> · <strong>1 Job In
-              Scope</strong>
+            <span>📅</span> Active Scope: <strong>All Staff</strong> · <strong>All Time</strong>
           </div>
           <div style="font-family: var(--font-mono); font-size: 10px;">
-            Export Ready: Clean A4 PDF &amp; Tabular RFC-4180 CSV
+            A4 Print &amp; CSV Ready
           </div>
-        </div>
-      </div>
-
-      <!-- Live Executive KPI Scorecard Bar -->
-      <div class="kpi-grid" style="margin-bottom: 1.5rem;">
-        <div class="kpi-card">
-          <div class="kpi-label">Filtered Task Volume</div>
-          <div class="kpi-value" id="rep-kpi-volume">0 / 0</div>
-          <div class="kpi-sub" id="rep-kpi-comp-rate">0% Completion Target</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Realized Value Throughput</div>
-          <div class="kpi-value green" id="rep-kpi-realized">LKR 0.00</div>
-          <div class="kpi-sub" id="rep-kpi-stated">Stated: LKR 0.00</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Strict On-Time SLA</div>
-          <div class="kpi-value" id="rep-kpi-ontime">0%</div>
-          <div class="kpi-sub" id="rep-kpi-ontime-sub">First-Time Punctuality</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Operational Health Grade</div>
-          <div class="kpi-value red" id="rep-kpi-grade">No Data</div>
-          <div class="kpi-sub" id="rep-kpi-score">Composite S<sub>prod</sub>: 0.0%</div>
         </div>
       </div>
 
       <!-- =======================================================================
-           PROFESSIONAL EXECUTIVE PDF REPORT DOCUMENT (ON-SCREEN & PRINT/PDF)
+           CLEAN EXECUTIVE REPORT SHEET (SINGLE UNIFIED VIEW FOR SCREEN & PDF)
            ======================================================================= -->
-      <div class="pdf-document-wrapper" id="pdf-report-container">
+      <div class="pdf-document-wrapper" id="pdf-report-container" style="margin-top: 1rem;">
 
-        <!-- On-Screen Document Controls Banner (Web View Only) -->
-        <div class="web-only cover-preview-bar"
-          style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px dashed var(--border-color); border-radius: var(--radius-sm); padding: 9px 14px;">
-          <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim);">
-            <span style="font-size: 14px;">📑</span>
-            <span>Document Layout: <strong style="color:var(--text-main);">Live Executive Report Sheet</strong> · <span
-                id="cover-status-badge" style="color:var(--emerald);">Cover Page Attached (Page 1 in PDF)</span></span>
-          </div>
-          <button type="button" class="btn-sm" id="btn-toggle-cover-preview" onclick="toggleCoverOnScreen()"
-            style="padding: 3px 10px; font-size: 11px;">
-            👁️ Preview Cover Page
-          </button>
-        </div>
-
-        <!-- =====================================================================
-             PAGE 1: LUXURY EXECUTIVE COVER PAGE (FULL-BLEED A4 OBSIDIAN COVER)
-             ===================================================================== -->
-        <div class="pdf-cover-page" id="doc-cover-page" style="display: none;">
+        <!-- Optional Page 1: Executive Cover Page (Shown when White/Dark Cover is selected) -->
+        <div class="pdf-cover-page hide-cover-in-print" id="doc-cover-page" style="display: none;">
           <div class="cover-top-brand">
             <div class="cover-logo"><span class="dot">●</span> KOART SOLUTIONS</div>
-            <div class="cover-badge">CONFIDENTIAL · EXECUTIVE C-SUITE ACCESS</div>
+            <div class="cover-badge">CONFIDENTIAL · EXECUTIVE REPORT</div>
           </div>
 
           <div class="cover-hero">
-            <div class="cover-kicker">PHASE 1 OPERATIONAL PLATFORM · EXECUTIVE AUDIT DOSSIER</div>
+            <div class="cover-kicker">OPERATIONAL MANAGEMENT PLATFORM · PERFORMANCE DOSSIER</div>
             <h1 class="cover-title">
               OPERATIONAL PERFORMANCE<br />
-              <span class="cover-title-accent">&amp; TASK MANAGEMENT AUDIT</span>
+              <span class="cover-title-accent">&amp; FINANCIAL AUDIT</span>
             </h1>
             <div class="cover-desc">
-              Deterministic analytical audit of multi-tenant task throughput, strict SLA punctuality, and financial
-              capital realization under Section 6 PostgreSQL scoring formulas.
+              Comprehensive summary of team productivity, on-time task delivery, revenue realization, and operational SLA tracking.
             </div>
           </div>
 
           <div class="cover-meta-grid">
             <div class="cover-meta-item">
-              <div class="lbl">ORGANIZATION WORKSPACE</div>
+              <div class="lbl">WORKSPACE</div>
               <div class="val" id="cover-meta-workspace">Apex Workspace</div>
-              <div class="sub" id="cover-meta-cat">Digital Solutions Practice</div>
+              <div class="sub" id="cover-meta-cat">Digital Solutions</div>
             </div>
             <div class="cover-meta-item">
-              <div class="lbl">EXECUTIVE AUDITOR / CONTROLLER</div>
+              <div class="lbl">PREPARED FOR</div>
               <div class="val" id="cover-meta-director">Adeesha Kannangara</div>
-              <div class="sub">Managing Director / Handler</div>
+              <div class="sub">Managing Director</div>
             </div>
             <div class="cover-meta-item">
-              <div class="lbl">ASSESSMENT SCOPE &amp; PERIOD</div>
-              <div class="val" id="cover-meta-scope">All Historical Records</div>
-              <div class="sub" id="cover-meta-tasks">1 Tasks Evaluated</div>
+              <div class="lbl">REPORTING PERIOD</div>
+              <div class="val" id="cover-meta-scope">All Records</div>
+              <div class="sub" id="cover-meta-tasks">Tasks Evaluated</div>
             </div>
             <div class="cover-meta-item">
-              <div class="lbl">DOCUMENT CONTROL REF</div>
-              <div class="val" id="cover-meta-ref">KO-REP-202611-001</div>
-              <div class="sub">Audited &amp; Deterministic Engine</div>
+              <div class="lbl">DOCUMENT REF</div>
+              <div class="val" id="cover-meta-ref">KO-REP-001</div>
+              <div class="sub">System Verified</div>
             </div>
           </div>
 
-          <!-- Table of Contents Pill Summary -->
           <div class="cover-toc-card">
-            <div class="cover-toc-title"><span>📋</span> AUDIT DOSSIER SECTIONS INCLUDED</div>
+            <div class="cover-toc-title"><span>📋</span> REPORT SECTIONS</div>
             <div class="cover-toc-grid">
-              <div class="toc-item"><span>01</span> Executive Scorecard &amp; Realization</div>
-              <div class="toc-item"><span>02</span> Staff Productivity &amp; Leaderboard</div>
-              <div class="toc-item"><span>03</span> Financial Valuation &amp; Capital Realization</div>
-              <div class="toc-item"><span>04</span> Overdue Bottlenecks &amp; Fault Audit</div>
-              <div class="toc-item"><span>05</span> WhatsApp Dispatch &amp; Communication Trail</div>
-              <div class="toc-item"><span>06</span> Executive Authorization &amp; Sign-Off</div>
+              <div class="toc-item"><span>01</span> Executive KPI Summary</div>
+              <div class="toc-item"><span>02</span> Staff Performance Leaderboard</div>
+              <div class="toc-item"><span>03</span> Task Valuation &amp; Revenue</div>
+              <div class="toc-item"><span>04</span> Overdue Tasks &amp; Bottlenecks</div>
+              <div class="toc-item"><span>05</span> WhatsApp Activity Log</div>
+              <div class="toc-item"><span>06</span> Executive Sign-Off</div>
             </div>
           </div>
 
           <div class="cover-bottom-stamp">
-            <div>KOART SOLUTIONS DIGITAL ENGINEERING PRACTICE · MULTI-TENANT SAAS ENGINE</div>
-            <div>STRICTLY CONFIDENTIAL · ALL RIGHTS RESERVED</div>
+            <div>KOART SOLUTIONS · OPERATIONAL MANAGEMENT PLATFORM</div>
+            <div>CONFIDENTIAL · ALL RIGHTS RESERVED</div>
           </div>
         </div>
 
-        <!-- =====================================================================
-             CONTENT PAGE(S)
-             ===================================================================== -->
+        <!-- Main Report Sheet -->
         <div class="doc-page-sheet" id="executive-report-document">
           <!-- Corporate Running Brand Header -->
           <div class="doc-running-header">
@@ -626,83 +550,77 @@
               <span class="dot">●</span> KOART SOLUTIONS · EXECUTIVE OPERATIONS REPORT
             </div>
             <div>
-              <span id="doc-running-ref">REF: KO-REP-202611-001</span> · <span id="doc-running-ws">Apex</span> ·
+              <span id="doc-running-ref">REF: KO-REP-001</span> · <span id="doc-running-ws">Apex</span> ·
               <strong>CONFIDENTIAL</strong>
             </div>
           </div>
 
           <!-- Document Main Heading Banner -->
-          <div
-            style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+          <div style="margin-bottom: 1.15rem; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
             <div>
               <h2 id="doc-report-title"
-                style="font-family: var(--font-display); font-size: 19px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em;">
-                Report 1: Staff Productivity &amp; Leaderboard Audit
+                style="font-family: var(--font-display); font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em;">
+                Report 1: Staff Performance Leaderboard
               </h2>
               <div id="doc-report-desc" style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">
-                Deterministic employee rankings computed via Fair Target Denominator N<sub>valid</sub>, Two-Tier
-                Punctuality, and Efficiency Score.
+                Team productivity rankings based on completion rate, on-time delivery, and realized project value.
               </div>
             </div>
             <div style="text-align: right; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim);">
-              <div>Scope: <strong id="doc-date-scope" style="color:var(--text-main);">All Historical Records</strong>
-              </div>
-              <div>Generated: <span id="doc-generated-time">2026-11-07 10:15 UTC</span></div>
+              <div>Scope: <strong id="doc-date-scope" style="color:var(--text-main);">All Time</strong></div>
+              <div>Generated: <span id="doc-generated-time">Just now</span></div>
             </div>
           </div>
 
-          <!-- Main Document Content Flow (Top Half) -->
+          <!-- Main Document Content Flow -->
           <div class="doc-main-flow">
-            <!-- KPI Summary Strip in Document -->
+            <!-- Single Unified KPI Summary Strip -->
             <div class="kpi-grid doc-kpi-strip" style="margin-bottom: 1.25rem;">
               <div class="kpi-card">
-                <div class="kpi-label">Volume Target</div>
+                <div class="kpi-label">Completed Tasks</div>
                 <div class="kpi-value" id="doc-kpi-vol">0 / 0</div>
                 <div class="doc-meter">
                   <div class="bar" id="doc-meter-vol" style="width: 0%;"></div>
                 </div>
-                <div class="kpi-card-sub" id="doc-kpi-vol-sub">0% Target Delivered</div>
+                <div class="kpi-card-sub" id="doc-kpi-vol-sub">0% Completion Rate</div>
               </div>
               <div class="kpi-card">
-                <div class="kpi-label">Realized Capital</div>
+                <div class="kpi-label">Realized Revenue</div>
                 <div class="kpi-value green" id="doc-kpi-val">LKR 0.00</div>
                 <div class="doc-meter green">
                   <div class="bar" id="doc-meter-val" style="width: 0%;"></div>
                 </div>
-                <div class="kpi-card-sub">Financial Realization</div>
+                <div class="kpi-card-sub" id="doc-kpi-val-sub">Stated: LKR 0.00</div>
               </div>
               <div class="kpi-card">
-                <div class="kpi-label">Strict On-Time SLA</div>
+                <div class="kpi-label">On-Time Delivery</div>
                 <div class="kpi-value blue" id="doc-kpi-ontime">100%</div>
                 <div class="doc-meter blue">
                   <div class="bar" id="doc-meter-ontime" style="width: 0%;"></div>
                 </div>
-                <div class="kpi-card-sub">Strict SLA Target</div>
+                <div class="kpi-card-sub">Strict SLA Punctuality</div>
               </div>
               <div class="kpi-card">
-                <div class="kpi-label">Health Grade</div>
+                <div class="kpi-label">Overall Status</div>
                 <div class="kpi-value red" id="doc-kpi-grade">Healthy</div>
-                <div class="kpi-card-sub" id="doc-kpi-sub">Score: 0% · 0 Overdue</div>
+                <div class="kpi-card-sub" id="doc-kpi-sub">Avg Score: 0% · 0 Overdue</div>
               </div>
             </div>
 
-            <!-- REPORT 1: LEADERBOARD CONTENT -->
+            <!-- REPORT 1: LEADERBOARD CONTENT (8 Clean Columns - Never Clips) -->
             <div id="report-content-1">
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 5%; text-align: center;">Rank</th>
-                      <th style="width: 17%;">Employee Name</th>
-                      <th style="width: 13%;">Role Title</th>
-                      <th style="width: 6%; text-align: right;">Assigned</th>
-                      <th style="width: 6%; text-align: right;">Done</th>
-                      <th style="width: 6%; text-align: right;">Done %</th>
-                      <th style="width: 8%; text-align: right;">On-Time</th>
-                      <th style="width: 6%; text-align: center;">Reminders</th>
-                      <th style="width: 14%; text-align: right;">Delivered Value</th>
+                      <th style="width: 7%; text-align: center;">Rank</th>
+                      <th style="width: 24%;">Staff Member</th>
+                      <th style="width: 15%; text-align: center;">Tasks (Done/Total)</th>
+                      <th style="width: 11%; text-align: right;">On-Time %</th>
+                      <th style="width: 10%; text-align: center;">Reminders</th>
+                      <th style="width: 15%; text-align: right;">Delivered Value</th>
                       <th style="width: 9%; text-align: right;">Score</th>
-                      <th style="width: 10%; text-align: center;">Grade</th>
+                      <th style="width: 9%; text-align: center;">Grade</th>
                     </tr>
                   </thead>
                   <tbody id="report-leaderboard-tbody"></tbody>
@@ -710,20 +628,19 @@
               </div>
             </div>
 
-            <!-- REPORT 2: VALUE CONTENT -->
+            <!-- REPORT 2: VALUE CONTENT (7 Clean Columns) -->
             <div id="report-content-2" style="display: none;">
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
                       <th style="width: 12%;">Job Code</th>
-                      <th style="width: 24%;">Task Title</th>
-                      <th style="width: 16%;">Assigned Staff</th>
-                      <th style="width: 8%; text-align: center;">Priority</th>
-                      <th style="width: 13%; text-align: right;">Stated Value</th>
-                      <th style="width: 13%; text-align: right;">Realized Value</th>
-                      <th style="width: 6%; text-align: right;">Variance</th>
-                      <th style="width: 8%; text-align: center;">Status</th>
+                      <th style="width: 29%;">Task &amp; Assignee</th>
+                      <th style="width: 10%; text-align: center;">Priority</th>
+                      <th style="width: 14%; text-align: right;">Stated Value</th>
+                      <th style="width: 14%; text-align: right;">Realized Value</th>
+                      <th style="width: 11%; text-align: right;">Variance</th>
+                      <th style="width: 10%; text-align: center;">Status</th>
                     </tr>
                   </thead>
                   <tbody id="report-val-tbody"></tbody>
@@ -731,20 +648,18 @@
               </div>
             </div>
 
-            <!-- REPORT 3: BOTTLENECKS CONTENT -->
+            <!-- REPORT 3: BOTTLENECKS CONTENT (6 Clean Columns - Fixes Right-Edge Clipping) -->
             <div id="report-content-3" style="display: none;">
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 11%;">Job Code</th>
-                      <th style="width: 22%;">Task Title</th>
-                      <th style="width: 15%;">Assignee</th>
-                      <th style="width: 12%; text-align: center;">Original Due</th>
-                      <th style="width: 12%; text-align: center;">Current Due</th>
-                      <th style="width: 9%; text-align: center;">Overdue</th>
-                      <th style="width: 11%; text-align: center;">Delay Cause</th>
-                      <th style="width: 8%; text-align: right;">Reminders</th>
+                      <th style="width: 12%;">Job Code</th>
+                      <th style="width: 26%;">Task Title</th>
+                      <th style="width: 16%;">Assignee</th>
+                      <th style="width: 20%; text-align: center;">Deadline (Orig → Current)</th>
+                      <th style="width: 12%; text-align: center;">Overdue</th>
+                      <th style="width: 14%; text-align: center;">Cause &amp; Reminders</th>
                     </tr>
                   </thead>
                   <tbody id="report-bottleneck-tbody"></tbody>
@@ -752,17 +667,17 @@
               </div>
             </div>
 
-            <!-- REPORT 4: AUDIT CONTENT -->
+            <!-- REPORT 4: AUDIT CONTENT (5 Clean Columns) -->
             <div id="report-content-4" style="display: none;">
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 15%;">Timestamp</th>
-                      <th style="width: 11%;">Job Code</th>
-                      <th style="width: 14%;">Task Event</th>
-                      <th style="width: 11%; text-align: center;">Delay Fault</th>
-                      <th style="width: 49%;">Handler Audit Log &amp; Context</th>
+                      <th style="width: 16%;">Date &amp; Time</th>
+                      <th style="width: 12%;">Job Code</th>
+                      <th style="width: 14%;">Event</th>
+                      <th style="width: 12%; text-align: center;">Attribution</th>
+                      <th style="width: 46%;">Activity Details &amp; Notes</th>
                     </tr>
                   </thead>
                   <tbody id="report-audit-tbody"></tbody>
@@ -770,21 +685,19 @@
               </div>
             </div>
 
-            <!-- REPORT 5: MULTI-COMPANY CONTENT -->
+            <!-- REPORT 5: MULTI-COMPANY CONTENT (7 Clean Columns) -->
             <div id="report-content-5" style="display: none;">
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 20%;">Organization Workspace</th>
-                      <th style="width: 14%;">Category</th>
-                      <th style="width: 6%; text-align: right;">Staff</th>
-                      <th style="width: 7%; text-align: right;">Jobs</th>
-                      <th style="width: 6%; text-align: right;">Done</th>
-                      <th style="width: 8%; text-align: right;">On-Time %</th>
-                      <th style="width: 14%; text-align: right;">Stated Valuation</th>
-                      <th style="width: 14%; text-align: right;">Realized Revenue</th>
-                      <th style="width: 11%; text-align: center;">Realization %</th>
+                      <th style="width: 24%;">Workspace</th>
+                      <th style="width: 9%; text-align: center;">Staff</th>
+                      <th style="width: 14%; text-align: center;">Tasks (Done/Total)</th>
+                      <th style="width: 11%; text-align: right;">On-Time %</th>
+                      <th style="width: 15%; text-align: right;">Stated Value</th>
+                      <th style="width: 15%; text-align: right;">Realized Revenue</th>
+                      <th style="width: 12%; text-align: center;">Realization</th>
                     </tr>
                   </thead>
                   <tbody id="report-multicompany-tbody"></tbody>
@@ -796,23 +709,20 @@
             <div id="report-content-6" style="display: none;">
               <!-- Section 01 -->
               <div class="doc-section-heading">
-                <span class="badge">SECTION 01</span> Staff Productivity &amp; Leaderboard Audit
+                <span class="badge">SECTION 01</span> Staff Performance Leaderboard
               </div>
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 5%; text-align: center;">Rank</th>
-                      <th style="width: 17%;">Employee</th>
-                      <th style="width: 13%;">Role</th>
-                      <th style="width: 6%; text-align: right;">Assigned</th>
-                      <th style="width: 6%; text-align: right;">Done</th>
-                      <th style="width: 6%; text-align: right;">Done %</th>
-                      <th style="width: 8%; text-align: right;">On-Time</th>
-                      <th style="width: 6%; text-align: center;">Reminders</th>
-                      <th style="width: 14%; text-align: right;">Delivered Value</th>
+                      <th style="width: 7%; text-align: center;">Rank</th>
+                      <th style="width: 24%;">Staff Member</th>
+                      <th style="width: 15%; text-align: center;">Tasks (Done/Total)</th>
+                      <th style="width: 11%; text-align: right;">On-Time %</th>
+                      <th style="width: 10%; text-align: center;">Reminders</th>
+                      <th style="width: 15%; text-align: right;">Delivered Value</th>
                       <th style="width: 9%; text-align: right;">Score</th>
-                      <th style="width: 10%; text-align: center;">Grade</th>
+                      <th style="width: 9%; text-align: center;">Grade</th>
                     </tr>
                   </thead>
                   <tbody id="report-dossier-lb-tbody"></tbody>
@@ -821,20 +731,19 @@
 
               <!-- Section 02 -->
               <div class="doc-section-heading" style="margin-top: 1.5rem;">
-                <span class="badge">SECTION 02</span> Job Financial Valuation &amp; Realization
+                <span class="badge">SECTION 02</span> Revenue &amp; Task Valuation
               </div>
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
                       <th style="width: 12%;">Job Code</th>
-                      <th style="width: 24%;">Task Title</th>
-                      <th style="width: 16%;">Assigned Staff</th>
-                      <th style="width: 8%; text-align: center;">Priority</th>
-                      <th style="width: 13%; text-align: right;">Stated Value</th>
-                      <th style="width: 13%; text-align: right;">Realized Value</th>
-                      <th style="width: 6%; text-align: right;">Variance</th>
-                      <th style="width: 8%; text-align: center;">Status</th>
+                      <th style="width: 29%;">Task &amp; Assignee</th>
+                      <th style="width: 10%; text-align: center;">Priority</th>
+                      <th style="width: 14%; text-align: right;">Stated Value</th>
+                      <th style="width: 14%; text-align: right;">Realized Value</th>
+                      <th style="width: 11%; text-align: right;">Variance</th>
+                      <th style="width: 10%; text-align: center;">Status</th>
                     </tr>
                   </thead>
                   <tbody id="report-dossier-val-tbody"></tbody>
@@ -843,20 +752,18 @@
 
               <!-- Section 03 -->
               <div class="doc-section-heading" style="margin-top: 1.5rem;">
-                <span class="badge">SECTION 03</span> Overdue Tasks, Extensions &amp; Bottlenecks
+                <span class="badge">SECTION 03</span> Overdue Tasks &amp; Bottlenecks
               </div>
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 11%;">Job Code</th>
-                      <th style="width: 22%;">Task Title</th>
-                      <th style="width: 15%;">Assignee</th>
-                      <th style="width: 12%; text-align: center;">Original Due</th>
-                      <th style="width: 12%; text-align: center;">Current Due</th>
-                      <th style="width: 9%; text-align: center;">Overdue</th>
-                      <th style="width: 11%; text-align: center;">Delay Cause</th>
-                      <th style="width: 8%; text-align: right;">Reminders</th>
+                      <th style="width: 12%;">Job Code</th>
+                      <th style="width: 26%;">Task Title</th>
+                      <th style="width: 16%;">Assignee</th>
+                      <th style="width: 20%; text-align: center;">Deadline (Orig → Current)</th>
+                      <th style="width: 12%; text-align: center;">Overdue</th>
+                      <th style="width: 14%; text-align: center;">Cause &amp; Reminders</th>
                     </tr>
                   </thead>
                   <tbody id="report-dossier-bot-tbody"></tbody>
@@ -865,17 +772,17 @@
 
               <!-- Section 04 -->
               <div class="doc-section-heading" style="margin-top: 1.5rem;">
-                <span class="badge">SECTION 04</span> WhatsApp Communication &amp; SLA Dispatch Trail
+                <span class="badge">SECTION 04</span> WhatsApp Activity Log
               </div>
               <div class="table-responsive">
                 <table class="data-table" style="table-layout: fixed; width: 100%;">
                   <thead>
                     <tr>
-                      <th style="width: 15%;">Timestamp</th>
-                      <th style="width: 11%;">Job Code</th>
-                      <th style="width: 14%;">Task Event</th>
-                      <th style="width: 11%; text-align: center;">Delay Fault</th>
-                      <th style="width: 49%;">Handler Audit Log &amp; Context</th>
+                      <th style="width: 16%;">Date &amp; Time</th>
+                      <th style="width: 12%;">Job Code</th>
+                      <th style="width: 14%;">Event</th>
+                      <th style="width: 12%; text-align: center;">Attribution</th>
+                      <th style="width: 46%;">Activity Details &amp; Notes</th>
                     </tr>
                   </thead>
                   <tbody id="report-dossier-aud-tbody"></tbody>
@@ -886,14 +793,13 @@
 
           <!-- Bottom Flow: Official Executive Sign-off Block & Running Footer -->
           <div class="doc-bottom-flow">
-            <!-- Formal Executive Sign-Off & Official Verification Block -->
             <div class="exec-signoff-block">
               <div class="signoff-box">
-                <div class="signoff-role">Prepared &amp; Computed By</div>
-                <div class="signoff-name">KOart Operational Engine</div>
+                <div class="signoff-role">Prepared By</div>
+                <div class="signoff-name">KOart Operations Platform</div>
                 <div class="signoff-line">
-                  <span>Deterministic Engine</span>
-                  <span class="signoff-badge">Section 6 Certified</span>
+                  <span>Automated Audit</span>
+                  <span class="signoff-badge">Verified ✓</span>
                 </div>
               </div>
 
@@ -907,10 +813,10 @@
               </div>
 
               <div class="signoff-box signoff-stamp-box">
-                <div class="signoff-role">Verification Authority</div>
+                <div class="signoff-role">Organization</div>
                 <div class="signoff-name" style="color: var(--red);">KOART SOLUTIONS</div>
                 <div class="signoff-line">
-                  <span>Executive Seal</span>
+                  <span>Official Record</span>
                   <span class="signoff-badge verified">Authenticated</span>
                 </div>
               </div>
@@ -918,8 +824,8 @@
 
             <!-- Running Footer -->
             <div class="doc-running-footer">
-              <div>KOart Solutions — Operational &amp; Task Management Platform (Phase 1 Rollout)</div>
-              <div>Confidential Executive Dossier · All Rights Reserved</div>
+              <div>KOart Solutions — Operational &amp; Task Management Platform</div>
+              <div>Confidential Executive Report · All Rights Reserved</div>
               <div>Page 1 of 1</div>
             </div>
           </div>
