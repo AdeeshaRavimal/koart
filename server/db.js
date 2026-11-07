@@ -14,6 +14,11 @@ function generateUUID() {
   return crypto.randomUUID ? crypto.randomUUID() : ('uuid_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
 }
 
+function sanitizeText(val) {
+  if (val === null || val === undefined) return '';
+  return String(val).replace(/[<>]/g, '').trim();
+}
+
 /**
  * Clean initial database state (Zero Demo Data)
  */
@@ -59,21 +64,55 @@ class PlatformDatabase {
   }
 
   init() {
+    const bakFile = DB_FILE + '.bak';
     if (fs.existsSync(DB_FILE)) {
       try {
         const raw = fs.readFileSync(DB_FILE, 'utf8');
         this.data = JSON.parse(raw);
       } catch (err) {
-        console.warn('Failed to parse database file, re-initializing with clean state:', err.message);
+        console.warn('Primary DB parse failed, attempting backup recovery:', err.message);
+        if (fs.existsSync(bakFile)) {
+          try {
+            this.data = JSON.parse(fs.readFileSync(bakFile, 'utf8'));
+            this.save();
+          } catch (bakErr) {
+            this.reset();
+          }
+        } else {
+          this.reset();
+        }
+      }
+    } else if (fs.existsSync(bakFile)) {
+      try {
+        this.data = JSON.parse(fs.readFileSync(bakFile, 'utf8'));
+        this.save();
+      } catch (err) {
         this.reset();
       }
     } else {
       this.reset();
     }
+
+    if (this.data && (!this.data._meta || !this.data._meta.auth_secret)) {
+      this.data._meta = {
+        ...(this.data._meta || {}),
+        auth_secret: crypto.randomBytes(32).toString('hex')
+      };
+      this.save();
+    }
+  }
+
+  getAuthSecret() {
+    if (process.env.KOART_AUTH_SECRET) return process.env.KOART_AUTH_SECRET;
+    if (this.data && this.data._meta && this.data._meta.auth_secret) {
+      return this.data._meta.auth_secret;
+    }
+    return 'koart-fallback-hmac-secret-2026';
   }
 
   reset() {
     this.data = getInitialSeedData();
+    this.data._meta = { auth_secret: crypto.randomBytes(32).toString('hex') };
     this.save();
     return this.data;
   }
@@ -84,7 +123,23 @@ class PlatformDatabase {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(DB_FILE, JSON.stringify(this.data, null, 2), 'utf8');
+      const serialized = JSON.stringify(this.data, null, 2);
+      const tmpFile = DB_FILE + '.tmp';
+      const bakFile = DB_FILE + '.bak';
+
+      fs.writeFileSync(tmpFile, serialized, 'utf8');
+      if (fs.existsSync(DB_FILE)) {
+        try {
+          fs.copyFileSync(DB_FILE, bakFile);
+        } catch (e) {}
+      }
+      try {
+        fs.renameSync(tmpFile, DB_FILE);
+      } catch (renameErr) {
+        // Fallback if Windows antivirus/indexer briefly holds lock on DB_FILE
+        fs.writeFileSync(DB_FILE, serialized, 'utf8');
+        try { fs.unlinkSync(tmpFile); } catch (e) {}
+      }
     } catch (err) {
       console.error('Critical database write error:', err);
     }
@@ -136,10 +191,10 @@ class PlatformDatabase {
     const newCompany = {
       id: companyData.id || generateUUID(),
       owner_id: companyData.owner_id,
-      name: companyData.name,
-      category: companyData.category || 'General Business',
-      currency_code: companyData.currency_code || 'LKR',
-      contact_phone: companyData.contact_phone || '',
+      name: sanitizeText(companyData.name),
+      category: sanitizeText(companyData.category || 'General Business'),
+      currency_code: sanitizeText(companyData.currency_code || 'LKR'),
+      contact_phone: sanitizeText(companyData.contact_phone || ''),
       onboarding_completed: true,
       created_at: new Date().toISOString()
     };
@@ -196,10 +251,10 @@ class PlatformDatabase {
     const newEmp = {
       id: generateUUID(),
       company_id: empData.company_id,
-      employee_code: code,
-      full_name: empData.full_name,
-      role_title: empData.role_title,
-      whatsapp_number: empData.whatsapp_number,
+      employee_code: sanitizeText(code),
+      full_name: sanitizeText(empData.full_name),
+      role_title: sanitizeText(empData.role_title),
+      whatsapp_number: sanitizeText(empData.whatsapp_number),
       is_shared: isShared,
       shared_scope: sharedScope,
       shared_company_ids: sharedCompanyIds,
@@ -268,9 +323,9 @@ class PlatformDatabase {
       id: generateUUID(),
       company_id: jobData.company_id,
       employee_id: jobData.employee_id,
-      job_code: jobCode,
-      title: jobData.title,
-      description: jobData.description || '',
+      job_code: sanitizeText(jobCode),
+      title: sanitizeText(jobData.title),
+      description: sanitizeText(jobData.description || ''),
       priority: jobData.priority || 'medium',
       status: 'pending',
       stated_value: Number(jobData.stated_value || 0),

@@ -9,7 +9,7 @@ const crypto = require('crypto');
 const db = require('./db');
 try {
   delete require.cache[require.resolve('./analytics')];
-} catch (e) {}
+} catch (e) { }
 const { calculateEmployeeScore, generateReports, generateCsvReport } = require('./analytics');
 const {
   buildWhatsAppJobCard,
@@ -47,15 +47,82 @@ function verifyPassword(plainText, storedHash) {
   return crypto.timingSafeEqual(a, b);
 }
 
-function jsonResponse(res, statusCode, data) {
+function getSigningSecret() {
+  if (typeof db.getAuthSecret === 'function') return db.getAuthSecret();
+  if (db.data && db.data._meta && db.data._meta.auth_secret) return db.data._meta.auth_secret;
+  return process.env.KOART_AUTH_SECRET || 'koart-fallback-hmac-secret-2026';
+}
+
+function signAuthToken(userId) {
+  const payload = {
+    sub: String(userId),
+    iat: Date.now(),
+    exp: Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days
+  };
+  const payloadB64 = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  const sig = crypto.createHmac('sha256', getSigningSecret()).update(payloadB64).digest('base64url');
+  return `${payloadB64}.${sig}`;
+}
+
+function verifyAuthToken(token) {
+  if (!token || typeof token !== 'string' || !token.includes('.')) return null;
+  const [payloadB64, sig] = token.split('.');
+  if (!payloadB64 || !sig) return null;
+  const expectedSig = crypto.createHmac('sha256', getSigningSecret()).update(payloadB64).digest('base64url');
+  const a = Buffer.from(sig, 'utf8');
+  const b = Buffer.from(expectedSig, 'utf8');
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+    if (!payload.sub || (payload.exp && Date.now() > payload.exp)) return null;
+    return payload.sub;
+  } catch (e) {
+    return null;
+  }
+}
+
+// In-memory brute-force rate limiter for login & password reset (max 10 failures per 15 mins per IP)
+const authRateLimits = new Map();
+function checkAuthRateLimit(ip) {
+  const now = Date.now();
+  const entry = authRateLimits.get(ip);
+  if (!entry) return { allowed: true };
+  if (now - entry.firstAttemptAt > 15 * 60 * 1000) {
+    authRateLimits.delete(ip);
+    return { allowed: true };
+  }
+  if (entry.failures >= 10) {
+    const waitMin = Math.ceil((15 * 60 * 1000 - (now - entry.firstAttemptAt)) / 60000);
+    return { allowed: false, waitMin };
+  }
+  return { allowed: true };
+}
+
+function recordAuthFailure(ip) {
+  const now = Date.now();
+  const entry = authRateLimits.get(ip);
+  if (!entry || now - entry.firstAttemptAt > 15 * 60 * 1000) {
+    authRateLimits.set(ip, { failures: 1, firstAttemptAt: now });
+  } else {
+    entry.failures += 1;
+  }
+}
+
+function clearAuthFailures(ip) {
+  authRateLimits.delete(ip);
+}
+
+function jsonResponse(res, statusCode, data, extraHeaders = {}) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-company-id, x-user-id',
+    'Access-Control-Expose-Headers': 'x-renewed-token',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'SAMEORIGIN',
-    'Referrer-Policy': 'strict-origin-when-cross-origin'
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    ...extraHeaders
   });
   res.end(JSON.stringify(data));
 }
@@ -74,16 +141,39 @@ function errorResponse(res, statusCode, message, details = null) {
 async function handleApiRequest(req, res, url, body) {
   const method = req.method.toUpperCase();
   const pathname = url.pathname;
+  const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').split(',')[0].trim();
 
-  // Tenant & User Context Isolation (Layer 3)
+  // 1. Verify Signed Bearer Token (or seamless local upgrade from active localhost session)
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+  const verifiedUserId = bearerToken ? verifyAuthToken(bearerToken) : null;
+
+  const hostHeader = String(req.headers.host || 'localhost').toLowerCase();
+  const isLocalDev = process.env.NODE_ENV !== 'production' && (hostHeader.startsWith('localhost') || hostHeader.startsWith('127.0.0.1'));
   const headerUserId = req.headers['x-user-id'];
-  const currentUser = (headerUserId ? db.data.users.find(u => u.id === headerUserId) : null) || db.data.users[0] || {
-    id: 'usr_guest',
-    full_name: 'Guest Handler',
-    email: 'guest@koart.lk',
-    account_type: 'individual',
-    max_companies: 999
-  };
+
+  let currentUser = null;
+  if (verifiedUserId) {
+    currentUser = db.data.users.find(u => u.id === verifiedUserId) || null;
+  } else if (isLocalDev && headerUserId) {
+    currentUser = db.data.users.find(u => u.id === headerUserId) || null;
+  } else if (isLocalDev && !headerUserId) {
+    currentUser = db.data.users[0] || null;
+  }
+
+  const isPublicAuthRoute = pathname === '/api/auth/login' || pathname === '/api/auth/register' || pathname === '/api/auth/reset-password';
+  if (!currentUser && !isPublicAuthRoute) {
+    return errorResponse(res, 401, 'Authentication required. Please sign in to continue.');
+  }
+  if (!currentUser) {
+    currentUser = {
+      id: 'usr_unauthenticated',
+      full_name: 'Unauthenticated',
+      email: '',
+      account_type: 'company',
+      max_companies: 1
+    };
+  }
 
   const userCompanies = db.getCompaniesByOwner(currentUser.id);
   const ownerCompanyIds = new Set(userCompanies.map(c => c.id));
@@ -133,8 +223,11 @@ async function handleApiRequest(req, res, url, body) {
       db.data.users.push(newUser);
       db.save();
 
+      const token = signAuthToken(newUser.id);
+
       return jsonResponse(res, 201, {
         success: true,
+        token,
         user: {
           id: newUser.id,
           fullName: newUser.full_name,
@@ -149,11 +242,17 @@ async function handleApiRequest(req, res, url, body) {
   }
 
   if (method === 'POST' && pathname === '/api/auth/login') {
+    const rateCheck = checkAuthRateLimit(clientIp);
+    if (!rateCheck.allowed) {
+      return errorResponse(res, 429, `Too many failed login attempts. Please wait ${rateCheck.waitMin} minute(s) before trying again.`);
+    }
+
     const { email, password } = body || {};
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPass = (password || '').trim();
     const user = db.data.users.find(u => (u.email || '').trim().toLowerCase() === cleanEmail);
     if (!user) {
+      recordAuthFailure(clientIp);
       return errorResponse(res, 401, 'Invalid email or password.');
     }
 
@@ -161,17 +260,23 @@ async function handleApiRequest(req, res, url, body) {
     const isValid = verifyPassword(cleanPass, storedPass);
 
     if (!isValid) {
+      recordAuthFailure(clientIp);
       return errorResponse(res, 401, 'Invalid email or password.');
     }
+
+    clearAuthFailures(clientIp);
 
     // Automatically upgrade legacy plaintext password to salted scrypt hash on login
     if (!storedPass.startsWith('scrypt$')) {
       user.password_hash = hashPassword(cleanPass);
-      try { db.save(); } catch (e) {}
+      try { db.save(); } catch (e) { }
     }
+
+    const token = signAuthToken(user.id);
 
     return jsonResponse(res, 200, {
       success: true,
+      token,
       user: {
         id: user.id,
         fullName: user.full_name,
@@ -183,6 +288,11 @@ async function handleApiRequest(req, res, url, body) {
   }
 
   if (method === 'POST' && pathname === '/api/auth/reset-password') {
+    const rateCheck = checkAuthRateLimit(clientIp);
+    if (!rateCheck.allowed) {
+      return errorResponse(res, 429, `Too many attempts. Please wait ${rateCheck.waitMin} minute(s).`);
+    }
+
     const { email, currentPassword, newPassword } = body || {};
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanNewPass = (newPassword || '').trim();
@@ -191,19 +301,23 @@ async function handleApiRequest(req, res, url, body) {
     }
     const user = db.data.users.find(u => (u.email || '').trim().toLowerCase() === cleanEmail);
     if (!user) {
+      recordAuthFailure(clientIp);
       return errorResponse(res, 404, 'No account found with this email.');
     }
 
-    const isAuthenticatedSelf = Boolean(headerUserId && headerUserId === user.id);
+    const isAuthenticatedSelf = Boolean(verifiedUserId && verifiedUserId === user.id) || Boolean(isLocalDev && headerUserId && headerUserId === user.id);
     const isVerifiedCurrent = Boolean(currentPassword && verifyPassword(String(currentPassword).trim(), user.password_hash));
     if (!isAuthenticatedSelf && !isVerifiedCurrent) {
+      recordAuthFailure(clientIp);
       return errorResponse(res, 403, 'Current password verification or active authenticated session is required to change password.');
     }
 
+    clearAuthFailures(clientIp);
     user.password_hash = hashPassword(cleanNewPass);
     db.save();
     return jsonResponse(res, 200, {
       success: true,
+      token: signAuthToken(user.id),
       message: 'Password successfully updated. You can now sign in.'
     });
   }
@@ -211,6 +325,7 @@ async function handleApiRequest(req, res, url, body) {
   if (method === 'GET' && pathname === '/api/auth/me') {
     return jsonResponse(res, 200, {
       success: true,
+      token: signAuthToken(currentUser.id),
       user: {
         id: currentUser.id,
         fullName: currentUser.full_name,
@@ -246,6 +361,7 @@ async function handleApiRequest(req, res, url, body) {
     const userCompanies = db.getCompaniesByOwner(currentUser.id);
     return jsonResponse(res, 200, {
       success: true,
+      token: signAuthToken(currentUser.id),
       activeCompanyId,
       userAccountType: currentUser.account_type,
       maxCompanies: currentUser.max_companies,
@@ -1630,9 +1746,9 @@ async function handleApiRequest(req, res, url, body) {
             .sort()
             .reverse();
           bakFiles.slice(3).forEach(oldBak => {
-            try { fs.unlinkSync(path.join(dataDir, oldBak)); } catch (e) {}
+            try { fs.unlinkSync(path.join(dataDir, oldBak)); } catch (e) { }
           });
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // Restore data and persist

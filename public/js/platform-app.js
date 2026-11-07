@@ -7,6 +7,7 @@
       activeCompanyId: null,
       companies: [],
       user: null,
+      authToken: null,
       employees: [],
       staff: [],
       jobs: [],
@@ -14,6 +15,17 @@
       calendarData: {},
       selectedJobForOverdue: null
     };
+
+    // Helper: Escape untrusted HTML strings to prevent Stored DOM XSS
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
     const reportState = {
       activeTab: 1,
@@ -194,6 +206,10 @@
       const res = await apiRequest('/api/auth/login', 'POST', { email, password });
       if (res.success && res.user) {
         state.user = res.user;
+        if (res.token) {
+          state.authToken = res.token;
+          localStorage.setItem('koart_auth_token', res.token);
+        }
         localStorage.setItem('koart_user_session', JSON.stringify(res.user));
         closeAuthModal();
         await initPlatform();
@@ -242,6 +258,10 @@
 
       if (res.success && res.user) {
         state.user = res.user;
+        if (res.token) {
+          state.authToken = res.token;
+          localStorage.setItem('koart_auth_token', res.token);
+        }
         localStorage.setItem('koart_user_session', JSON.stringify(res.user));
         closeAuthModal();
         alert(`✓ Account created successfully for ${res.user.fullName} (${res.user.accountType === 'company' ? 'Single Org Tier' : 'Multi-Business Controller'})!\n\nNext Step: Let's register your first business workspace.`);
@@ -258,7 +278,9 @@
     function handleLogout() {
       if (confirm('Are you sure you want to sign out of this session?')) {
         localStorage.removeItem('koart_user_session');
+        localStorage.removeItem('koart_auth_token');
         state.user = null;
+        state.authToken = null;
         state.companies = [];
         state.activeCompanyId = null;
         const userMenu = document.getElementById('user-dropdown-menu');
@@ -268,10 +290,16 @@
     }
 
     // ------------------------------------------------------------------------
-    // API CALLS (With Isolated Multi-Tenancy & User Context)
+    // API CALLS (With Signed Bearer Token & Multi-Tenancy Context)
     // ------------------------------------------------------------------------
     async function apiRequest(endpoint, method = 'GET', body = null) {
       const headers = { 'Content-Type': 'application/json' };
+      if (!state.authToken) {
+        try { state.authToken = localStorage.getItem('koart_auth_token') || null; } catch (e) {}
+      }
+      if (state.authToken) {
+        headers['Authorization'] = `Bearer ${state.authToken}`;
+      }
       if (state.activeCompanyId) {
         headers['x-company-id'] = state.activeCompanyId;
       }
@@ -285,6 +313,10 @@
       try {
         const res = await fetch(endpoint, opts);
         const data = await res.json();
+        if (data && data.token) {
+          state.authToken = data.token;
+          try { localStorage.setItem('koart_auth_token', data.token); } catch (e) {}
+        }
         return data;
       } catch (err) {
         console.error('API Network Error:', err);
