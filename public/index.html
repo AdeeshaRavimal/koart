@@ -15,8 +15,8 @@
     href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/platform.css?v=20261107-7" />
-  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-7" />
+  <link rel="stylesheet" href="/css/platform.css?v=20261107-8" />
+  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-8" />
 </head>
 
 <body class="theme-dark">
@@ -76,6 +76,10 @@
         <button class="nav-tab-btn" id="tab-btn-reports" onclick="switchTab('reports')">
           <span>📈</span> <span class="tab-label-full">Reports &amp; Leaderboard</span><span
             class="tab-label-short">Reports</span>
+        </button>
+        <button class="nav-tab-btn" id="tab-btn-budget" onclick="switchTab('budget')">
+          <span>💰</span> <span class="tab-label-full">Wanted &amp; Budget</span><span
+            class="tab-label-short">Budget</span>
         </button>
       </nav>
 
@@ -892,6 +896,162 @@
       </div>
     </div>
 
+    <!-- =======================================================================
+         VIEW 6: ALL-COMPANIES & COMPANY-BY-COMPANY WANTED / FINANCIAL BREAKDOWN
+         ======================================================================= -->
+    <div id="view-budget" class="tab-view">
+      <!-- Header & Quick Month Scope Bar -->
+      <div class="panel-card" style="margin-bottom: 1.25rem;">
+        <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+          <div>
+            <div class="panel-title">
+              <span>💰</span> All-Companies &amp; Company-by-Company Financial / Wanted Breakdown
+            </div>
+            <div style="font-size: 12px; color: var(--text-dim); margin-top: 3px;">
+              Track how much money is wanted (open/pending tasks), realized (completed), and planned across all companies combined and each company individually for any current or future month.
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="pill-preset active" id="budget-pill-all" onclick="setBudgetTabMonthPreset('all')">📆 All Scheduled</button>
+            <button type="button" class="pill-preset" id="budget-pill-this" onclick="setBudgetTabMonthPreset('this')">📅 This Month</button>
+            <button type="button" class="pill-preset" id="budget-pill-next" onclick="setBudgetTabMonthPreset('next')" style="border-color: rgba(168, 85, 247, 0.45); color: #c084fc;">🗓️ Next Month</button>
+            <button type="button" class="pill-preset" id="budget-pill-plus2" onclick="setBudgetTabMonthPreset('plus2')">🗓️ +2 Months</button>
+            <input type="month" id="budget-tab-month-picker" class="form-control" style="width: 145px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="setBudgetTabCustomMonth(this.value)" title="Select any specific month" />
+            <select id="budget-tab-company-filter" class="form-control" style="width: 170px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="renderDedicatedBudgetTab()">
+              <option value="">🏢 All Companies</option>
+            </select>
+            <button type="button" class="btn-sm" onclick="loadDedicatedBudgetTab(true)">🔄 Refresh</button>
+          </div>
+        </div>
+
+        <!-- Active Scope Indicator -->
+        <div style="padding: 10px 1.25rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12px;">
+          <div>
+            <span>📅 Active Financial Scope: </span>
+            <strong id="budget-tab-scope-badge" style="color: var(--red); font-family: var(--font-mono);">All Scheduled Months</strong>
+          </div>
+          <div style="font-size: 11px; color: var(--text-dim);">
+            💡 Click any company card below to filter the task breakdown table by that company, or click <strong>+ New Job Assignment</strong> to schedule future-month tasks.
+          </div>
+        </div>
+
+        <!-- PART 1: ALL-COMPANIES COMBINED GRAND FINANCIAL ROLLUP -->
+        <div style="padding: 1.25rem;">
+          <div style="font-size: 11px; font-weight: 800; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+            🌐 1. All-Companies Combined Rollup (Grouped by Currency)
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+            <div style="background: rgba(245, 158, 11, 0.07); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 10px; padding: 14px 16px;">
+              <div style="font-size: 10.5px; font-family: var(--font-mono); color: #f59e0b; text-transform: uppercase; font-weight: 700;">
+                ⏳ Total Wanted (Open / Pending Jobs)
+              </div>
+              <div id="budget-grand-wanted" style="font-size: 20px; font-weight: 800; font-family: var(--font-mono); color: #f59e0b; margin-top: 6px;">
+                LKR 0.00
+              </div>
+              <div id="budget-grand-wanted-sub" style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+                0 open tasks across all companies
+              </div>
+            </div>
+
+            <div style="background: rgba(16, 185, 129, 0.07); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 10px; padding: 14px 16px;">
+              <div style="font-size: 10.5px; font-family: var(--font-mono); color: var(--emerald); text-transform: uppercase; font-weight: 700;">
+                ✅ Total Realized (Completed Jobs)
+              </div>
+              <div id="budget-grand-realized" style="font-size: 20px; font-weight: 800; font-family: var(--font-mono); color: var(--emerald); margin-top: 6px;">
+                LKR 0.00
+              </div>
+              <div id="budget-grand-realized-sub" style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+                0 completed tasks across all companies
+              </div>
+            </div>
+
+            <div style="background: rgba(59, 130, 246, 0.07); border: 1px solid rgba(59, 130, 246, 0.35); border-radius: 10px; padding: 14px 16px;">
+              <div style="font-size: 10.5px; font-family: var(--font-mono); color: #60a5fa; text-transform: uppercase; font-weight: 700;">
+                📋 Total Planned Budget (All Jobs)
+              </div>
+              <div id="budget-grand-planned" style="font-size: 20px; font-weight: 800; font-family: var(--font-mono); color: var(--text-main); margin-top: 6px;">
+                LKR 0.00
+              </div>
+              <div id="budget-grand-planned-sub" style="font-size: 11px; color: var(--text-dim); margin-top: 4px;">
+                0 total scheduled tasks
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PART 2: EACH COMPANY BY EACH COMPANY BREAKDOWN CARDS -->
+      <div class="panel-card" style="margin-bottom: 1.25rem;">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>🏢</span> 2. Company-by-Company Wanted &amp; Planned Breakdown Cards
+          </div>
+          <span style="font-size: 11px; color: var(--text-dim);" id="budget-company-count-label">All Registered Workspaces</span>
+        </div>
+        <div style="padding: 1.25rem;">
+          <div id="budget-each-company-cards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- PART 3: COMPANY-BY-COMPANY SUMMARY TABLE -->
+      <div class="panel-card" style="margin-bottom: 1.25rem;">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>📊</span> 3. Company-by-Company Comparative Financial Table
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Company / Workspace</th>
+                <th style="text-align: center;">Currency</th>
+                <th style="text-align: center;">Open Tasks</th>
+                <th style="text-align: center;">Completed</th>
+                <th style="text-align: center;">Total Tasks</th>
+                <th style="text-align: right;">⏳ Wanted (Open)</th>
+                <th style="text-align: right;">✅ Realized (Done)</th>
+                <th style="text-align: right;">📋 Total Planned</th>
+                <th style="text-align: right;">Quick Action</th>
+              </tr>
+            </thead>
+            <tbody id="budget-company-table-tbody"></tbody>
+            <tfoot id="budget-company-table-tfoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- PART 4: SCHEDULED JOBS BREAKDOWN LIST FOR SELECTED MONTH & COMPANY -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>📋</span> 4. Scheduled Tasks Contributing to This Breakdown
+          </div>
+          <span style="font-size: 11px; color: var(--text-dim);" id="budget-jobs-table-subtitle">Showing matching tasks</span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Job Code</th>
+                <th>Task Title</th>
+                <th>Assigned Staff</th>
+                <th>Scheduled Due Date</th>
+                <th>Status</th>
+                <th style="text-align: right;">Job Cost / Wanted Value</th>
+                <th style="text-align: right;">Manage</th>
+              </tr>
+            </thead>
+            <tbody id="budget-jobs-table-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- =========================================================================
@@ -1704,6 +1864,9 @@
           <button type="button" class="notif-tab-pill" id="notif-tab-all" onclick="setNotifFilterCategory('all')">
             📋 All Tasks (<span id="notif-cnt-all">0</span>)
           </button>
+          <button type="button" class="notif-tab-pill" id="notif-tab-budget" onclick="setNotifFilterCategory('budget')" style="border-color: rgba(245, 158, 11, 0.45); color: #fbbf24;">
+            💰 Wanted Breakdown
+          </button>
         </div>
 
         <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
@@ -1716,9 +1879,9 @@
         </div>
       </div>
 
-      <!-- ALL-COMPANIES & EACH-COMPANY BUDGET / WANTED SUMMARY PANEL -->
+      <!-- ALL-COMPANIES & EACH-COMPANY BUDGET / WANTED SUMMARY PANEL (Shown on 💰 Wanted Breakdown tab) -->
       <div id="notif-company-budget-box"
-        style="margin-bottom: 12px; padding: 10px 12px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px;">
+        style="display: none; margin-bottom: 12px; padding: 12px 14px; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border-subtle);">
           <div style="font-size: 11px; font-weight: 800; font-family: var(--font-mono); color: var(--text-main); text-transform: uppercase;">
             💰 Budget &amp; Valuation Breakdown (<span id="notif-budget-scope-label">All Months</span>)
@@ -1753,7 +1916,7 @@
   <!-- =========================================================================
        FRONTEND CLIENT SCRIPT (API Integration, State & Reactivity)
        ========================================================================= -->
-  <script src="/js/platform-app.js?v=20261107-7"></script>
+  <script src="/js/platform-app.js?v=20261107-8"></script>
 </body>
 
 </html>

@@ -92,6 +92,7 @@
         loadEmployeesList().then(() => loadStaffTable());
       }
       if (tabName === 'reports') loadReportsView();
+      if (tabName === 'budget') loadDedicatedBudgetTab();
       if (tabName === 'dashboard') loadDashboardKPIs();
     }
 
@@ -2458,6 +2459,11 @@
       if (forceRenderModal || (modalEl && modalEl.classList.contains('active'))) {
         renderAllCompaniesNotificationItems();
       }
+
+      const budgetViewEl = document.getElementById('view-budget');
+      if (budgetViewEl && budgetViewEl.classList.contains('active')) {
+        renderDedicatedBudgetTab();
+      }
     }
 
     async function openAllCompaniesNotificationModal(initialCategory = null) {
@@ -2477,7 +2483,7 @@
 
     function setNotifFilterCategory(cat) {
       notifState.activeCategory = cat;
-      ['open', 'overdue', 'due_today', 'upcoming_week', 'scheduled_future', 'all'].forEach(k => {
+      ['open', 'overdue', 'due_today', 'upcoming_week', 'scheduled_future', 'all', 'budget'].forEach(k => {
         const btn = document.getElementById(`notif-tab-${k}`);
         if (btn) btn.classList.toggle('active', k === cat);
       });
@@ -2493,6 +2499,7 @@
 
     function renderAllCompaniesNotificationItems() {
       const container = document.getElementById('notif-items-container');
+      const budgetBox = document.getElementById('notif-company-budget-box');
       if (!container) return;
 
       const data = notifState.data;
@@ -2506,6 +2513,12 @@
       const monthFilterEl = document.getElementById('notif-month-filter');
       const selectedMonth = monthFilterEl ? monthFilterEl.value : '';
       const cat = notifState.activeCategory || 'open';
+
+      // Show #notif-company-budget-box ONLY when the separate "💰 Wanted Breakdown" tab is active
+      if (budgetBox) {
+        budgetBox.style.display = (cat === 'budget') ? 'block' : 'none';
+      }
+      container.style.display = (cat === 'budget') ? 'none' : '';
 
       // 1. Compute All-Companies & Each-Company Wanted / Planned Budget Breakdown for the selected Month
       const monthScopedItems = data.items.filter(item => {
@@ -2749,6 +2762,334 @@
         await initPlatform();
       }
       await triggerFollowup(jobId);
+    }
+
+    // ------------------------------------------------------------------------
+    // DEDICATED TAB: ALL-COMPANIES & COMPANY-BY-COMPANY WANTED / BUDGET VIEW
+    // ------------------------------------------------------------------------
+    const budgetTabState = {
+      preset: 'all',
+      selectedMonth: '',
+      selectedCompanyId: ''
+    };
+
+    async function loadDedicatedBudgetTab(forceFetch = false) {
+      if (forceFetch || !notifState.data) {
+        await loadAllCompaniesNotifications(false);
+      }
+      const data = notifState.data;
+      const compSelect = document.getElementById('budget-tab-company-filter');
+      if (compSelect && data && Array.isArray(data.companies)) {
+        const curVal = compSelect.value;
+        compSelect.innerHTML = `<option value="">🏢 All Companies (${data.companies.length})</option>` +
+          data.companies.map(c => `<option value="${c.id}">${c.name} (${c.currency})</option>`).join('');
+        if (curVal && data.companies.some(x => x.id === curVal)) {
+          compSelect.value = curVal;
+        }
+      }
+      renderDedicatedBudgetTab();
+    }
+
+    function setBudgetTabMonthPreset(preset) {
+      budgetTabState.preset = preset;
+      const now = new Date();
+      const toYM = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+      ['all', 'this', 'next', 'plus2'].forEach(p => {
+        const btn = document.getElementById(`budget-pill-${p}`);
+        if (btn) btn.classList.toggle('active', p === preset);
+      });
+
+      if (preset === 'this') {
+        budgetTabState.selectedMonth = toYM(new Date(now.getFullYear(), now.getMonth(), 1));
+      } else if (preset === 'next') {
+        budgetTabState.selectedMonth = toYM(new Date(now.getFullYear(), now.getMonth() + 1, 1));
+      } else if (preset === 'plus2') {
+        budgetTabState.selectedMonth = toYM(new Date(now.getFullYear(), now.getMonth() + 2, 1));
+      } else {
+        budgetTabState.selectedMonth = '';
+      }
+
+      const monthInput = document.getElementById('budget-tab-month-picker');
+      if (monthInput) monthInput.value = budgetTabState.selectedMonth;
+
+      renderDedicatedBudgetTab();
+    }
+
+    function setBudgetTabCustomMonth(monthVal) {
+      budgetTabState.selectedMonth = monthVal || '';
+      budgetTabState.preset = monthVal ? 'custom' : 'all';
+      ['all', 'this', 'next', 'plus2'].forEach(p => {
+        const btn = document.getElementById(`budget-pill-${p}`);
+        if (btn) btn.classList.toggle('active', !monthVal && p === 'all');
+      });
+      renderDedicatedBudgetTab();
+    }
+
+    function toggleBudgetTabCompanyCard(compId) {
+      const compSelect = document.getElementById('budget-tab-company-filter');
+      if (!compSelect) return;
+      compSelect.value = (compSelect.value === compId) ? '' : compId;
+      renderDedicatedBudgetTab();
+    }
+
+    function renderDedicatedBudgetTab() {
+      const data = notifState.data;
+      if (!data || !Array.isArray(data.items)) return;
+
+      const selectedMonth = budgetTabState.selectedMonth || '';
+      const compSelect = document.getElementById('budget-tab-company-filter');
+      const selectedCompId = compSelect ? compSelect.value : '';
+
+      const fmtMonthNice = (ym) => {
+        if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return 'All Scheduled Months';
+        const [y, m] = ym.split('-').map(Number);
+        return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      };
+
+      // Filter items by selected month
+      const monthItems = data.items.filter(item => {
+        if (selectedMonth && item.dueMonth !== selectedMonth) return false;
+        return true;
+      });
+
+      const scopeBadge = document.getElementById('budget-tab-scope-badge');
+      if (scopeBadge) {
+        scopeBadge.textContent = `${fmtMonthNice(selectedMonth)} (${monthItems.length} Scheduled Tasks)`;
+      }
+
+      // 1. Aggregate All-Companies Grand Rollup & Each-Company Breakdown
+      const grandCurrencyMap = {};
+      const byCompanyMap = {};
+      let grandOpenTasks = 0;
+      let grandDoneTasks = 0;
+
+      (data.companies || []).forEach(c => {
+        byCompanyMap[c.id] = {
+          id: c.id,
+          name: c.name,
+          category: c.category || 'Workspace',
+          currency: (c.currency || 'LKR').toUpperCase(),
+          openCount: 0,
+          doneCount: 0,
+          totalCount: 0,
+          wantedValue: 0,
+          realizedValue: 0,
+          plannedValue: 0
+        };
+      });
+
+      monthItems.forEach(item => {
+        const curr = (item.currency || 'LKR').toUpperCase();
+        const isDone = item.category === 'completed';
+        const val = Number(item.statedValue) || 0;
+
+        if (!grandCurrencyMap[curr]) {
+          grandCurrencyMap[curr] = { wanted: 0, realized: 0, planned: 0 };
+        }
+        grandCurrencyMap[curr].planned += val;
+        if (!isDone) {
+          grandCurrencyMap[curr].wanted += val;
+          grandOpenTasks += 1;
+        } else {
+          grandCurrencyMap[curr].realized += val;
+          grandDoneTasks += 1;
+        }
+
+        if (!byCompanyMap[item.companyId]) {
+          byCompanyMap[item.companyId] = {
+            id: item.companyId,
+            name: item.companyName,
+            category: item.companyCategory || 'Workspace',
+            currency: curr,
+            openCount: 0,
+            doneCount: 0,
+            totalCount: 0,
+            wantedValue: 0,
+            realizedValue: 0,
+            plannedValue: 0
+          };
+        }
+        const compEntry = byCompanyMap[item.companyId];
+        compEntry.totalCount += 1;
+        compEntry.plannedValue += val;
+        if (!isDone) {
+          compEntry.openCount += 1;
+          compEntry.wantedValue += val;
+        } else {
+          compEntry.doneCount += 1;
+          compEntry.realizedValue += val;
+        }
+      });
+
+      const fmtGrandField = (field) => {
+        const entries = Object.entries(grandCurrencyMap);
+        if (!entries.length) return 'LKR 0.00';
+        return entries.map(([curr, obj]) => formatLKR(obj[field] || 0, curr)).join(' + ');
+      };
+
+      const setTxt = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      };
+
+      setTxt('budget-grand-wanted', fmtGrandField('wanted'));
+      setTxt('budget-grand-wanted-sub', `${grandOpenTasks} open / pending task(s) across ${(data.companies || []).length} companies`);
+      setTxt('budget-grand-realized', fmtGrandField('realized'));
+      setTxt('budget-grand-realized-sub', `${grandDoneTasks} completed task(s) across ${(data.companies || []).length} companies`);
+      setTxt('budget-grand-planned', fmtGrandField('planned'));
+      setTxt('budget-grand-planned-sub', `${monthItems.length} total scheduled task(s) in ${fmtMonthNice(selectedMonth)}`);
+
+      // 2. Render Company-by-Company Cards
+      const compList = Object.values(byCompanyMap);
+      setTxt('budget-company-count-label', `${compList.length} Registered Workspaces`);
+
+      const cardsContainer = document.getElementById('budget-each-company-cards');
+      if (cardsContainer) {
+        if (!compList.length) {
+          cardsContainer.innerHTML = '<div style="color: var(--text-dim); padding: 16px;">No companies registered yet.</div>';
+        } else {
+          cardsContainer.innerHTML = compList.map(comp => {
+            const isSelected = selectedCompId === comp.id;
+            const pctDone = comp.totalCount > 0 ? Math.round((comp.doneCount / comp.totalCount) * 100) : 0;
+            const borderStyle = isSelected
+              ? 'border: 2px solid var(--red); background: rgba(219, 0, 49, 0.07);'
+              : 'border: 1px solid var(--border-color); background: var(--bg-surface);';
+
+            return `
+              <div onclick="toggleBudgetTabCompanyCard('${comp.id}')" title="Click to filter task list by ${comp.name}" style="${borderStyle} border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all 0.15s ease;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px;">
+                  <div>
+                    <div style="font-weight: 800; font-size: 14px; color: var(--text-main);">🏢 ${comp.name}</div>
+                    <div style="font-size: 11px; color: var(--text-dim);">${comp.category}</div>
+                  </div>
+                  <span style="font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted);">
+                    ${comp.currency}
+                  </span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--border-subtle);">
+                  <span style="font-size: 11.5px; color: var(--text-dim);">⏳ Wanted (Open):</span>
+                  <strong style="font-family: var(--font-mono); font-size: 14px; color: #f59e0b;">${formatLKR(comp.wantedValue, comp.currency)}</strong>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0;">
+                  <span style="font-size: 11.5px; color: var(--text-dim);">✅ Realized (Done):</span>
+                  <strong style="font-family: var(--font-mono); font-size: 12.5px; color: var(--emerald);">${formatLKR(comp.realizedValue, comp.currency)}</strong>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0 8px; border-top: 1px dashed var(--border-subtle);">
+                  <span style="font-size: 11.5px; font-weight: 700; color: var(--text-main);">📋 Total Planned:</span>
+                  <strong style="font-family: var(--font-mono); font-size: 13px; color: var(--text-main);">${formatLKR(comp.plannedValue, comp.currency)}</strong>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: var(--text-dim); font-family: var(--font-mono);">
+                  <span>${comp.openCount} Open · ${comp.doneCount} Done (${comp.totalCount} Total)</span>
+                  <span>${pctDone}% Done</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 3. Render Company-by-Company Comparative Table
+      const compTbody = document.getElementById('budget-company-table-tbody');
+      const compTfoot = document.getElementById('budget-company-table-tfoot');
+      if (compTbody) {
+        if (!compList.length) {
+          compTbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-dim);">No workspaces found.</td></tr>';
+          if (compTfoot) compTfoot.innerHTML = '';
+        } else {
+          compTbody.innerHTML = compList.map(comp => `
+            <tr>
+              <td>
+                <div style="font-weight: 700; color: var(--text-main);">🏢 ${comp.name}</div>
+                <div style="font-size: 11px; color: var(--text-dim);">${comp.category}</div>
+              </td>
+              <td style="text-align: center; font-family: var(--font-mono); font-weight: 700;">${comp.currency}</td>
+              <td style="text-align: center; font-family: var(--font-mono); color: #f59e0b; font-weight: 700;">${comp.openCount}</td>
+              <td style="text-align: center; font-family: var(--font-mono); color: var(--emerald);">${comp.doneCount}</td>
+              <td style="text-align: center; font-family: var(--font-mono);">${comp.totalCount}</td>
+              <td style="text-align: right; font-family: var(--font-mono); font-weight: 800; color: #f59e0b;">${formatLKR(comp.wantedValue, comp.currency)}</td>
+              <td style="text-align: right; font-family: var(--font-mono); color: var(--emerald);">${formatLKR(comp.realizedValue, comp.currency)}</td>
+              <td style="text-align: right; font-family: var(--font-mono); font-weight: 700;">${formatLKR(comp.plannedValue, comp.currency)}</td>
+              <td style="text-align: right;">
+                <button type="button" class="btn-sm" onclick="toggleBudgetTabCompanyCard('${comp.id}')">
+                  ${selectedCompId === comp.id ? '✓ Filtered' : '🔍 Filter Tasks'}
+                </button>
+              </td>
+            </tr>
+          `).join('');
+
+          if (compTfoot) {
+            compTfoot.innerHTML = `
+              <tr style="background: rgba(219, 0, 49, 0.06); font-weight: 800; border-top: 2px solid var(--border-color);">
+                <td>ALL COMPANIES COMBINED (${compList.length})</td>
+                <td style="text-align: center; font-family: var(--font-mono);">MULTI</td>
+                <td style="text-align: center; font-family: var(--font-mono); color: #f59e0b;">${grandOpenTasks}</td>
+                <td style="text-align: center; font-family: var(--font-mono); color: var(--emerald);">${grandDoneTasks}</td>
+                <td style="text-align: center; font-family: var(--font-mono);">${monthItems.length}</td>
+                <td style="text-align: right; font-family: var(--font-mono); color: #f59e0b;">${fmtGrandField('wanted')}</td>
+                <td style="text-align: right; font-family: var(--font-mono); color: var(--emerald);">${fmtGrandField('realized')}</td>
+                <td style="text-align: right; font-family: var(--font-mono);">${fmtGrandField('planned')}</td>
+                <td></td>
+              </tr>
+            `;
+          }
+        }
+      }
+
+      // 4. Render Matching Scheduled Jobs Table
+      const filteredJobs = monthItems.filter(item => {
+        if (selectedCompId && item.companyId !== selectedCompId) return false;
+        return true;
+      });
+
+      setTxt('budget-jobs-table-subtitle', `Showing ${filteredJobs.length} scheduled task(s) in ${fmtMonthNice(selectedMonth)}${selectedCompId ? ' (Filtered by selected company)' : ' across all companies'}`);
+
+      const jobsTbody = document.getElementById('budget-jobs-table-tbody');
+      if (jobsTbody) {
+        if (!filteredJobs.length) {
+          jobsTbody.innerHTML = `
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 32px; color: var(--text-dim);">
+                No scheduled tasks found for ${fmtMonthNice(selectedMonth)}. Click <strong>+ New Job Assignment</strong> in the top bar to schedule future-month tasks.
+              </td>
+            </tr>
+          `;
+        } else {
+          jobsTbody.innerHTML = filteredJobs.map(item => {
+            const isDone = item.category === 'completed';
+            const statusBadge = isDone
+              ? '<span class="chip chip-green">COMPLETED</span>'
+              : `<span class="chip ${item.badgeClass}">${item.timeLabel}</span>`;
+            return `
+              <tr>
+                <td>
+                  <strong>🏢 ${item.companyName}</strong>
+                  <div style="font-size: 10px; color: var(--text-dim); font-family: var(--font-mono);">${item.currency}</div>
+                </td>
+                <td style="font-family: var(--font-mono); font-weight: 700; color: var(--red);">#${item.jobCode}</td>
+                <td><strong>${item.title}</strong></td>
+                <td>${item.employeeName} <span style="font-size: 11px; color: var(--text-dim);">(${item.employeeRole || 'Staff'})</span></td>
+                <td style="font-family: var(--font-mono); font-size: 11.5px;">${formatDate(item.currentDueDate)}</td>
+                <td>${statusBadge}</td>
+                <td style="text-align: right; font-family: var(--font-mono); font-weight: 800; color: ${isDone ? 'var(--emerald)' : '#f59e0b'};">
+                  ${formatLKR(item.statedValue, item.currency)}
+                </td>
+                <td style="text-align: right;">
+                  <div style="display: flex; gap: 5px; justify-content: flex-end;">
+                    <button type="button" class="btn-sm btn-status-quick" onclick="notifOpenJobStatus('${item.companyId}', '${item.id}')" title="Change Status or Update Job Price">
+                      ⚡ Status &amp; Price
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
     }
 
     // Initialize on window load
