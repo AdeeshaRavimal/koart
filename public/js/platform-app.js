@@ -2483,23 +2483,15 @@
 
     function setNotifFilterCategory(cat) {
       notifState.activeCategory = cat;
-      ['open', 'overdue', 'due_today', 'upcoming_week', 'scheduled_future', 'all', 'budget'].forEach(k => {
+      ['open', 'overdue', 'due_today', 'upcoming_week', 'scheduled_future', 'all'].forEach(k => {
         const btn = document.getElementById(`notif-tab-${k}`);
         if (btn) btn.classList.toggle('active', k === cat);
       });
       renderAllCompaniesNotificationItems();
     }
 
-    function toggleNotifCompanyCardFilter(compId) {
-      const compFilterEl = document.getElementById('notif-company-filter');
-      if (!compFilterEl) return;
-      compFilterEl.value = (compFilterEl.value === compId) ? '' : compId;
-      renderAllCompaniesNotificationItems();
-    }
-
     function renderAllCompaniesNotificationItems() {
       const container = document.getElementById('notif-items-container');
-      const budgetBox = document.getElementById('notif-company-budget-box');
       if (!container) return;
 
       const data = notifState.data;
@@ -2514,135 +2506,7 @@
       const selectedMonth = monthFilterEl ? monthFilterEl.value : '';
       const cat = notifState.activeCategory || 'open';
 
-      // Show #notif-company-budget-box ONLY when the separate "💰 Wanted Breakdown" tab is active
-      if (budgetBox) {
-        budgetBox.style.display = (cat === 'budget') ? 'block' : 'none';
-      }
-      container.style.display = (cat === 'budget') ? 'none' : '';
-
-      // 1. Compute All-Companies & Each-Company Wanted / Planned Budget Breakdown for the selected Month
-      const monthScopedItems = data.items.filter(item => {
-        if (selectedMonth && item.dueMonth !== selectedMonth) return false;
-        return true;
-      });
-
-      const grandCurrencyMap = {};
-      const byCompanyMap = {};
-      (data.companies || []).forEach(c => {
-        byCompanyMap[c.id] = {
-          id: c.id,
-          name: c.name,
-          category: c.category || 'Workspace',
-          currency: (c.currency || 'LKR').toUpperCase(),
-          openCount: 0,
-          doneCount: 0,
-          totalCount: 0,
-          wantedValue: 0,
-          realizedValue: 0,
-          plannedValue: 0
-        };
-      });
-
-      monthScopedItems.forEach(item => {
-        const curr = (item.currency || 'LKR').toUpperCase();
-        const isDone = item.category === 'completed';
-        const val = Number(item.statedValue) || 0;
-
-        if (!grandCurrencyMap[curr]) {
-          grandCurrencyMap[curr] = { wanted: 0, planned: 0, realized: 0, openCount: 0, totalCount: 0 };
-        }
-        grandCurrencyMap[curr].planned += val;
-        grandCurrencyMap[curr].totalCount += 1;
-        if (!isDone) {
-          grandCurrencyMap[curr].wanted += val;
-          grandCurrencyMap[curr].openCount += 1;
-        } else {
-          grandCurrencyMap[curr].realized += val;
-        }
-
-        if (!byCompanyMap[item.companyId]) {
-          byCompanyMap[item.companyId] = {
-            id: item.companyId,
-            name: item.companyName,
-            category: item.companyCategory || 'Workspace',
-            currency: curr,
-            openCount: 0,
-            doneCount: 0,
-            totalCount: 0,
-            wantedValue: 0,
-            realizedValue: 0,
-            plannedValue: 0
-          };
-        }
-        const compEntry = byCompanyMap[item.companyId];
-        compEntry.totalCount += 1;
-        compEntry.plannedValue += val;
-        if (!isDone) {
-          compEntry.openCount += 1;
-          compEntry.wantedValue += val;
-        } else {
-          compEntry.doneCount += 1;
-          compEntry.realizedValue += val;
-        }
-      });
-
-      const fmtGrandMap = (field) => {
-        const entries = Object.entries(grandCurrencyMap);
-        if (!entries.length) return 'LKR 0';
-        return entries.map(([curr, obj]) => formatLKR(obj[field] || 0, curr)).join(' + ');
-      };
-
-      const scopeBadgeEl = document.getElementById('notif-budget-scope-label');
-      if (scopeBadgeEl) {
-        if (selectedMonth && monthFilterEl && monthFilterEl.selectedOptions[0]) {
-          scopeBadgeEl.textContent = `Month Scope: ${monthFilterEl.selectedOptions[0].textContent.replace(/^[^\w]+/, '')}`;
-        } else {
-          scopeBadgeEl.textContent = `Scope: All Scheduled Months (${monthScopedItems.length} Tasks)`;
-        }
-      }
-
-      const grandWantedEl = document.getElementById('notif-grand-wanted');
-      if (grandWantedEl) grandWantedEl.textContent = fmtGrandMap('wanted');
-
-      const grandPlannedEl = document.getElementById('notif-grand-planned');
-      if (grandPlannedEl) grandPlannedEl.textContent = fmtGrandMap('planned');
-
-      const eachCompContainer = document.getElementById('notif-each-company-breakdown');
-      if (eachCompContainer) {
-        const compList = Object.values(byCompanyMap);
-        if (!compList.length) {
-          eachCompContainer.innerHTML = '<div style="font-size: 11px; color: var(--text-dim);">No companies found.</div>';
-        } else {
-          eachCompContainer.innerHTML = compList.map(comp => {
-            const isSelected = selectedCompId === comp.id;
-            const borderStyle = isSelected
-              ? 'border: 1.5px solid var(--red); background: rgba(219, 0, 49, 0.08);'
-              : 'border: 1px solid var(--border-color); background: var(--bg-surface);';
-            return `
-              <div onclick="toggleNotifCompanyCardFilter('${comp.id}')" title="Click to filter task list by ${comp.name}" style="${borderStyle} border-radius: 7px; padding: 8px 10px; cursor: pointer; transition: all 0.15s ease;">
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 4px;">
-                  <span style="font-weight: 800; font-size: 12px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    🏢 ${comp.name}
-                  </span>
-                  <span style="font-family: var(--font-mono); font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted);">
-                    ${comp.currency} · ${comp.openCount} open / ${comp.totalCount} all
-                  </span>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 11px; margin-top: 2px;">
-                  <span style="color: var(--text-dim); font-size: 10px;">Wanted (Open):</span>
-                  <strong style="font-family: var(--font-mono); color: #f59e0b; font-size: 12.5px;">${formatLKR(comp.wantedValue, comp.currency)}</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10.5px; margin-top: 2px; padding-top: 2px; border-top: 1px dashed rgba(255,255,255,0.06);">
-                  <span style="color: var(--text-dim); font-size: 9.5px;">Total Planned:</span>
-                  <span style="font-family: var(--font-mono); color: var(--emerald); font-weight: 700;">${formatLKR(comp.plannedValue, comp.currency)}</span>
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
-      }
-
-      // 2. Filter individual notification task cards
+      // Filter individual notification task cards
       const filtered = data.items.filter(item => {
         if (selectedCompId && item.companyId !== selectedCompId) return false;
         if (selectedMonth && item.dueMonth !== selectedMonth) return false;
