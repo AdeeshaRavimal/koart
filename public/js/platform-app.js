@@ -80,9 +80,14 @@
       if (targetView) targetView.classList.add('active');
       if (targetBtn) {
         targetBtn.classList.add('active');
-        if (typeof targetBtn.scrollIntoView === 'function') {
-          targetBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        if (window.innerWidth <= 1024 && targetBtn.parentElement) {
+          const pill = targetBtn.parentElement;
+          const scrollLeft = targetBtn.offsetLeft - (pill.clientWidth / 2) + (targetBtn.clientWidth / 2);
+          pill.scrollTo({ left: Math.max(0, scrollLeft), behavior: 'smooth' });
         }
+      }
+      if (window.scrollX !== 0) {
+        window.scrollTo({ left: 0, top: window.scrollY });
       }
 
       if (tabName === 'calendar') loadCalendarView();
@@ -2954,6 +2959,504 @@
           }).join('');
         }
       }
+    }
+
+    function buildBudgetExportSnapshot() {
+      const data = notifState.data || { companies: [], items: [] };
+      const selectedMonth = budgetTabState.selectedMonth || '';
+      const compSelect = document.getElementById('budget-tab-company-filter');
+      const selectedCompId = compSelect ? compSelect.value : '';
+
+      const fmtMonthNice = (ym) => {
+        if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return 'All Scheduled Months';
+        const [y, m] = ym.split('-').map(Number);
+        return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      };
+
+      const monthItems = (data.items || []).filter(item => {
+        if (selectedMonth && item.dueMonth !== selectedMonth) return false;
+        return true;
+      });
+
+      const grandCurrencyMap = {};
+      const byCompanyMap = {};
+      let grandOpenTasks = 0;
+      let grandDoneTasks = 0;
+
+      (data.companies || []).forEach(c => {
+        if (selectedCompId && c.id !== selectedCompId) return;
+        byCompanyMap[c.id] = {
+          id: c.id,
+          name: c.name,
+          category: c.category || 'Workspace',
+          currency: (c.currency || 'LKR').toUpperCase(),
+          openCount: 0,
+          doneCount: 0,
+          totalCount: 0,
+          wantedValue: 0,
+          realizedValue: 0,
+          plannedValue: 0
+        };
+      });
+
+      const scopedItems = monthItems.filter(item => {
+        if (selectedCompId && item.companyId !== selectedCompId) return false;
+        return true;
+      });
+
+      scopedItems.forEach(item => {
+        const curr = (item.currency || 'LKR').toUpperCase();
+        const isDone = item.category === 'completed';
+        const val = Number(item.statedValue) || 0;
+
+        if (!grandCurrencyMap[curr]) {
+          grandCurrencyMap[curr] = { wanted: 0, realized: 0, planned: 0, openCount: 0, doneCount: 0, totalCount: 0 };
+        }
+        grandCurrencyMap[curr].planned += val;
+        grandCurrencyMap[curr].totalCount += 1;
+        if (!isDone) {
+          grandCurrencyMap[curr].wanted += val;
+          grandCurrencyMap[curr].openCount += 1;
+          grandOpenTasks += 1;
+        } else {
+          grandCurrencyMap[curr].realized += val;
+          grandCurrencyMap[curr].doneCount += 1;
+          grandDoneTasks += 1;
+        }
+
+        if (!byCompanyMap[item.companyId]) {
+          byCompanyMap[item.companyId] = {
+            id: item.companyId,
+            name: item.companyName,
+            category: item.companyCategory || 'Workspace',
+            currency: curr,
+            openCount: 0,
+            doneCount: 0,
+            totalCount: 0,
+            wantedValue: 0,
+            realizedValue: 0,
+            plannedValue: 0
+          };
+        }
+        const compEntry = byCompanyMap[item.companyId];
+        compEntry.totalCount += 1;
+        compEntry.plannedValue += val;
+        if (!isDone) {
+          compEntry.openCount += 1;
+          compEntry.wantedValue += val;
+        } else {
+          compEntry.doneCount += 1;
+          compEntry.realizedValue += val;
+        }
+      });
+
+      const fmtGrandField = (field) => {
+        const entries = Object.entries(grandCurrencyMap);
+        if (!entries.length) return 'LKR 0.00';
+        return entries.map(([curr, obj]) => formatLKR(obj[field] || 0, curr)).join(' + ');
+      };
+
+      const selectedCompanyObj = selectedCompId
+        ? (data.companies || []).find(c => c.id === selectedCompId)
+        : null;
+
+      return {
+        scopeTitle: fmtMonthNice(selectedMonth),
+        selectedMonth,
+        companyScopeLabel: selectedCompanyObj
+          ? `${selectedCompanyObj.name} (${selectedCompanyObj.currency})`
+          : `All Registered Companies (${Object.keys(byCompanyMap).length})`,
+        grandCurrencyMap,
+        compList: Object.values(byCompanyMap),
+        scopedItems,
+        grandOpenTasks,
+        grandDoneTasks,
+        grandTotalTasks: scopedItems.length,
+        grandWantedStr: fmtGrandField('wanted'),
+        grandRealizedStr: fmtGrandField('realized'),
+        grandPlannedStr: fmtGrandField('planned')
+      };
+    }
+
+    async function exportBudgetTabCSV() {
+      if (!notifState.data) {
+        await loadAllCompaniesNotifications(false);
+      }
+      const snap = buildBudgetExportSnapshot();
+      const escCsv = (v) => {
+        const s = String(v === null || v === undefined ? '' : v);
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+          return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+      };
+
+      const lines = [];
+      lines.push(['KOART SOLUTIONS — ALL-COMPANIES & COMPANY-BY-COMPANY FINANCIAL / WANTED BREAKDOWN REPORT'].map(escCsv).join(','));
+      lines.push(['Active Month Scope', snap.scopeTitle, 'Workspace Scope', snap.companyScopeLabel, 'Generated At', new Date().toISOString()].map(escCsv).join(','));
+      lines.push('');
+
+      // Section 1: All-Companies Combined Rollup by Currency
+      lines.push(['SECTION 1: ALL-COMPANIES COMBINED ROLLUP (BY CURRENCY)'].map(escCsv).join(','));
+      lines.push(['Currency', 'Open Tasks', 'Completed Tasks', 'Total Tasks', 'Wanted (Open) Amount', 'Realized (Done) Amount', 'Total Planned Budget'].map(escCsv).join(','));
+      const currEntries = Object.entries(snap.grandCurrencyMap);
+      if (!currEntries.length) {
+        lines.push(['LKR', 0, 0, 0, '0.00', '0.00', '0.00'].map(escCsv).join(','));
+      } else {
+        currEntries.forEach(([curr, obj]) => {
+          lines.push([
+            curr,
+            obj.openCount,
+            obj.doneCount,
+            obj.totalCount,
+            Number(obj.wanted || 0).toFixed(2),
+            Number(obj.realized || 0).toFixed(2),
+            Number(obj.planned || 0).toFixed(2)
+          ].map(escCsv).join(','));
+        });
+      }
+      lines.push('');
+
+      // Section 2: Company-by-Company Breakdown
+      lines.push(['SECTION 2: COMPANY-BY-COMPANY FINANCIAL & WANTED BREAKDOWN'].map(escCsv).join(','));
+      lines.push(['Company Name', 'Category', 'Currency', 'Open Tasks', 'Completed Tasks', 'Total Tasks', 'Wanted (Open) Amount', 'Realized (Done) Amount', 'Total Planned Budget'].map(escCsv).join(','));
+      snap.compList.forEach(c => {
+        lines.push([
+          c.name,
+          c.category,
+          c.currency,
+          c.openCount,
+          c.doneCount,
+          c.totalCount,
+          Number(c.wantedValue || 0).toFixed(2),
+          Number(c.realizedValue || 0).toFixed(2),
+          Number(c.plannedValue || 0).toFixed(2)
+        ].map(escCsv).join(','));
+      });
+      lines.push([
+        `ALL COMPANIES COMBINED (${snap.compList.length})`,
+        'Consolidated Rollup',
+        'MULTI',
+        snap.grandOpenTasks,
+        snap.grandDoneTasks,
+        snap.grandTotalTasks,
+        snap.grandWantedStr,
+        snap.grandRealizedStr,
+        snap.grandPlannedStr
+      ].map(escCsv).join(','));
+      lines.push('');
+
+      // Section 3: Scheduled Tasks Detailed Ledger
+      lines.push(['SECTION 3: SCHEDULED TASKS CONTRIBUTING TO THIS BREAKDOWN'].map(escCsv).join(','));
+      lines.push(['Company Name', 'Currency', 'Job Code', 'Task Title', 'Assigned Staff', 'Staff Role', 'Scheduled Due Date', 'Due Month', 'Status', 'Wanted (Open) Amount', 'Realized (Done) Amount', 'Job Cost / Planned Value'].map(escCsv).join(','));
+      snap.scopedItems.forEach(item => {
+        const isDone = item.category === 'completed';
+        const val = Number(item.statedValue || 0).toFixed(2);
+        lines.push([
+          item.companyName,
+          item.currency,
+          item.jobCode,
+          item.title,
+          item.employeeName,
+          item.employeeRole || 'Staff',
+          item.currentDueDate || '',
+          item.dueMonth || '',
+          isDone ? 'COMPLETED' : (item.status || 'OPEN').toUpperCase(),
+          isDone ? '0.00' : val,
+          isDone ? val : '0.00',
+          val
+        ].map(escCsv).join(','));
+      });
+
+      const csvContent = '\uFEFF' + lines.join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const slugScope = (snap.selectedMonth || 'all-months').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const dateStr = new Date().toISOString().substring(0, 10);
+      a.href = url;
+      a.download = `KOart_Budget_Wanted_Breakdown_${slugScope}_${dateStr}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    async function exportBudgetTabPDF() {
+      if (!notifState.data) {
+        await loadAllCompaniesNotifications(false);
+      }
+      const snap = buildBudgetExportSnapshot();
+      const now = new Date();
+      const genDateStr = `${now.toISOString().substring(0, 10)} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      const refCode = `KO-BDG-${now.toISOString().substring(0, 10).replace(/-/g, '')}`;
+      const directorName = state.user ? state.user.fullName : 'Executive Director';
+
+      const compRowsHtml = snap.compList.map(c => {
+        const pct = c.totalCount > 0 ? Math.round((c.doneCount / c.totalCount) * 100) : 0;
+        return `
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: #0f172a;">${c.name}</div>
+              <div style="font-size: 9.5px; color: #64748b;">${c.category}</div>
+            </td>
+            <td style="text-align: center; font-family: 'Space Mono', monospace; font-weight: 700;">${c.currency}</td>
+            <td style="text-align: center; font-family: 'Space Mono', monospace; color: #d97706; font-weight: 700;">${c.openCount}</td>
+            <td style="text-align: center; font-family: 'Space Mono', monospace; color: #059669;">${c.doneCount}</td>
+            <td style="text-align: center; font-family: 'Space Mono', monospace;">${c.totalCount} (${pct}%)</td>
+            <td style="text-align: right; font-family: 'Space Mono', monospace; font-weight: 700; color: #d97706;">${formatLKR(c.wantedValue, c.currency)}</td>
+            <td style="text-align: right; font-family: 'Space Mono', monospace; font-weight: 700; color: #059669;">${formatLKR(c.realizedValue, c.currency)}</td>
+            <td style="text-align: right; font-family: 'Space Mono', monospace; font-weight: 700; color: #0f172a;">${formatLKR(c.plannedValue, c.currency)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const taskRowsHtml = snap.scopedItems.length
+        ? snap.scopedItems.map(item => {
+            const isDone = item.category === 'completed';
+            return `
+              <tr>
+                <td>
+                  <div style="font-weight: 700;">${item.companyName}</div>
+                  <div style="font-size: 9px; color: #64748b; font-family: 'Space Mono', monospace;">${item.currency}</div>
+                </td>
+                <td style="font-family: 'Space Mono', monospace; font-weight: 700; color: #db0031;">#${item.jobCode}</td>
+                <td><strong>${item.title}</strong></td>
+                <td>${item.employeeName} <span style="font-size: 9.5px; color: #64748b;">(${item.employeeRole || 'Staff'})</span></td>
+                <td style="font-family: 'Space Mono', monospace; font-size: 10px;">${formatDate(item.currentDueDate)}</td>
+                <td style="text-align: center;">
+                  <span style="font-family: 'Space Mono', monospace; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: ${isDone ? '#ecfdf5' : '#fffbeb'}; color: ${isDone ? '#047857' : '#b45309'}; border: 1px solid ${isDone ? '#a7f3d0' : '#fde68a'};">
+                    ${isDone ? 'COMPLETED' : 'WANTED / OPEN'}
+                  </span>
+                </td>
+                <td style="text-align: right; font-family: 'Space Mono', monospace; font-weight: 700; color: ${isDone ? '#059669' : '#d97706'};">
+                  ${formatLKR(item.statedValue, item.currency)}
+                </td>
+              </tr>
+            `;
+          }).join('')
+        : `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #64748b;">No scheduled tasks in ${snap.scopeTitle}.</td></tr>`;
+
+      const printWindow = window.open('', '_blank', 'width=1120,height=860,scrollbars=yes,resizable=yes');
+      if (!printWindow) {
+        alert('Please allow pop-ups in your browser to open the A4 PDF Print Studio.');
+        return;
+      }
+
+      const htmlDoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>KOart Solutions — Budget & Wanted Financial Breakdown (${snap.scopeTitle})</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="${window.location.origin}/css/print-studio.css?v=20261107-10" />
+  <style>
+    @page { size: A4 portrait; margin: 0 !important; }
+    .budget-summary-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .budget-summary-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: #f8fafc;
+    }
+    .budget-summary-card .lbl {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #475569;
+    }
+    .budget-summary-card .val {
+      font-family: 'Space Mono', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+    .budget-summary-card .sub {
+      font-size: 9.5px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="print-studio-toolbar">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <span style="font-weight: 800; font-family: 'Bricolage Grotesque', sans-serif; font-size: 15px;">
+        KOART <span style="color: #db0031;">STUDIO</span> · All-Companies &amp; Company-by-Company Budget PDF Publisher
+      </span>
+      <span style="font-size: 11px; color: #94a3b8; font-family: 'Space Mono', monospace; background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 4px;">
+        Scope: ${snap.scopeTitle} · ${snap.companyScopeLabel}
+      </span>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button class="btn-print-primary" onclick="window.print()">🖨️ Print / Save as PDF (Ctrl+P)</button>
+      <button class="btn-ctrl" onclick="window.close()">✕ Close Preview</button>
+    </div>
+  </div>
+
+  <div class="print-paper-container">
+    <div id="executive-print-sheet" class="orient-portrait">
+      <!-- Running Header -->
+      <div class="doc-running-header">
+        <div class="doc-running-brand">KOART <span>SOLUTIONS</span> · MULTI-COMPANY FINANCIAL &amp; WANTED BREAKDOWN</div>
+        <div class="doc-running-meta">REF: ${refCode} · SCOPE: ${snap.scopeTitle.toUpperCase()}</div>
+      </div>
+
+      <!-- Letterhead -->
+      <div class="doc-letterhead">
+        <div class="doc-brand-col">
+          <div class="doc-company-badge">PORTFOLIO FINANCIAL AUDIT</div>
+          <h1 class="doc-title">All-Companies &amp; Company-by-Company Wanted / Budget Report</h1>
+          <p class="doc-subtitle">Consolidated breakdown of open/wanted job funding, completed realized value, and total planned budget by company.</p>
+        </div>
+        <div class="doc-meta-box">
+          <div class="doc-meta-row"><span class="meta-lbl">Active Month Scope:</span> <strong class="meta-val">${snap.scopeTitle}</strong></div>
+          <div class="doc-meta-row"><span class="meta-lbl">Workspace Scope:</span> <strong class="meta-val">${snap.companyScopeLabel}</strong></div>
+          <div class="doc-meta-row"><span class="meta-lbl">Generated On:</span> <span class="meta-val">${genDateStr}</span></div>
+          <div class="doc-meta-row"><span class="meta-lbl">Authorized By:</span> <span class="meta-val">${directorName}</span></div>
+        </div>
+      </div>
+
+      <!-- Section 1: All-Companies Combined Rollup -->
+      <div class="report-doc-section" style="margin-bottom: 18px;">
+        <div class="doc-section-heading">
+          <span class="sec-num">01</span>
+          <div>
+            <h3 class="sec-title">All-Companies Combined Financial Summary (Grouped by Currency)</h3>
+            <p class="sec-desc">Aggregate money wanted (open/pending jobs), realized (completed jobs), and total planned across your workspaces.</p>
+          </div>
+        </div>
+        <div class="budget-summary-cards">
+          <div class="budget-summary-card" style="border-left: 4px solid #d97706;">
+            <div class="lbl">⏳ Total Wanted (Open / Pending)</div>
+            <div class="val" style="color: #d97706;">${snap.grandWantedStr}</div>
+            <div class="sub">${snap.grandOpenTasks} open task(s) requiring completion</div>
+          </div>
+          <div class="budget-summary-card" style="border-left: 4px solid #059669;">
+            <div class="lbl">✅ Total Realized (Completed)</div>
+            <div class="val" style="color: #059669;">${snap.grandRealizedStr}</div>
+            <div class="sub">${snap.grandDoneTasks} completed task(s) delivered</div>
+          </div>
+          <div class="budget-summary-card" style="border-left: 4px solid #2563eb;">
+            <div class="lbl">📋 Total Planned Budget (All)</div>
+            <div class="val" style="color: #0f172a;">${snap.grandPlannedStr}</div>
+            <div class="sub">${snap.grandTotalTasks} total scheduled task(s) in ${snap.scopeTitle}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Company-by-Company Breakdown Table -->
+      <div class="report-doc-section" style="margin-bottom: 18px;">
+        <div class="doc-section-heading">
+          <span class="sec-num">02</span>
+          <div>
+            <h3 class="sec-title">Company-by-Company Financial &amp; Wanted Breakdown</h3>
+            <p class="sec-desc">Side-by-side comparison of open wanted value, realized value, and total planned budget for each company.</p>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table report-print-table">
+            <thead>
+              <tr>
+                <th>Company / Workspace</th>
+                <th style="text-align: center;">Curr</th>
+                <th style="text-align: center;">Open</th>
+                <th style="text-align: center;">Done</th>
+                <th style="text-align: center;">Total Tasks</th>
+                <th style="text-align: right;">⏳ Wanted (Open)</th>
+                <th style="text-align: right;">✅ Realized (Done)</th>
+                <th style="text-align: right;">📋 Total Planned</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${compRowsHtml}
+            </tbody>
+            <tfoot>
+              <tr style="background: rgba(219, 0, 49, 0.06); font-weight: 800; border-top: 2px solid #0f172a;">
+                <td>ALL COMPANIES COMBINED (${snap.compList.length})</td>
+                <td style="text-align: center; font-family: 'Space Mono', monospace;">MULTI</td>
+                <td style="text-align: center; font-family: 'Space Mono', monospace; color: #d97706;">${snap.grandOpenTasks}</td>
+                <td style="text-align: center; font-family: 'Space Mono', monospace; color: #059669;">${snap.grandDoneTasks}</td>
+                <td style="text-align: center; font-family: 'Space Mono', monospace;">${snap.grandTotalTasks}</td>
+                <td style="text-align: right; font-family: 'Space Mono', monospace; color: #d97706;">${snap.grandWantedStr}</td>
+                <td style="text-align: right; font-family: 'Space Mono', monospace; color: #059669;">${snap.grandRealizedStr}</td>
+                <td style="text-align: right; font-family: 'Space Mono', monospace; color: #0f172a;">${snap.grandPlannedStr}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 3: Scheduled Tasks Detailed Ledger -->
+      <div class="report-doc-section">
+        <div class="doc-section-heading">
+          <span class="sec-num">03</span>
+          <div>
+            <h3 class="sec-title">Scheduled Tasks &amp; Job Cost Ledger (${snap.scopeTitle})</h3>
+            <p class="sec-desc">Individual scheduled tasks contributing to each company's wanted and realized totals.</p>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table report-print-table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Job Code</th>
+                <th>Task Title</th>
+                <th>Assigned Staff</th>
+                <th>Scheduled Due Date</th>
+                <th style="text-align: center;">Status</th>
+                <th style="text-align: right;">Job Cost / Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${taskRowsHtml}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Bottom Sign-off -->
+      <div class="doc-bottom-flow">
+        <div class="exec-signoff-block">
+          <div class="signoff-box">
+            <div class="signoff-role">Prepared By</div>
+            <div class="signoff-name">KOart Operations Platform</div>
+            <div class="signoff-line"><span>Automated Financial Audit</span><span class="signoff-badge">Verified ✓</span></div>
+          </div>
+          <div class="signoff-box">
+            <div class="signoff-role">Reviewed &amp; Authorized By</div>
+            <div class="signoff-name">${directorName}</div>
+            <div class="signoff-line"><span>Executive Sign-off</span><span class="signoff-badge verified">Approved ✓</span></div>
+          </div>
+          <div class="signoff-box signoff-stamp-box">
+            <div class="signoff-role">Organization</div>
+            <div class="signoff-name" style="color: #db0031;">KOART SOLUTIONS</div>
+            <div class="signoff-line"><span>Official Budget Record</span><span class="signoff-badge verified">Authenticated</span></div>
+          </div>
+        </div>
+        <div class="doc-running-footer">
+          <div>KOart Solutions — Multi-Company Financial &amp; Wanted Breakdown</div>
+          <div>Confidential Executive Financial Report · Scope: ${snap.scopeTitle}</div>
+          <div>Page 1 of 1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+      printWindow.document.open();
+      printWindow.document.write(htmlDoc);
+      printWindow.document.close();
     }
 
     // Initialize on window load
