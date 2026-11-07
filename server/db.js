@@ -8,7 +8,22 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DB_FILE = path.resolve(__dirname, 'data/platform-db.json');
+// Database location: set DATA_DIR (e.g. a Railway volume mounted at /data) for persistent hosting.
+// Falls back to the bundled server/data folder for local use.
+const BUNDLED_DB_FILE = path.resolve(__dirname, 'data/platform-db.json');
+const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || '';
+const DB_FILE = DATA_DIR ? path.resolve(DATA_DIR, 'platform-db.json') : BUNDLED_DB_FILE;
+
+// First boot on a fresh volume: seed it with the bundled database so existing accounts carry over
+if (DATA_DIR && !fs.existsSync(DB_FILE) && fs.existsSync(BUNDLED_DB_FILE)) {
+  try {
+    fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
+    fs.copyFileSync(BUNDLED_DB_FILE, DB_FILE);
+    console.log(`Seeded persistent database at ${DB_FILE} from bundled copy.`);
+  } catch (err) {
+    console.warn('Could not seed persistent database volume:', err.message);
+  }
+}
 
 function generateUUID() {
   return crypto.randomUUID ? crypto.randomUUID() : ('uuid_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
