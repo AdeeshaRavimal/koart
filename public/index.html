@@ -15,8 +15,8 @@
     href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
     rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/platform.css?v=20261107-11" />
-  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-11" />
+  <link rel="stylesheet" href="/css/platform.css?v=20261107-12" />
+  <link rel="stylesheet" href="/css/reports-pdf.css?v=20261107-12" />
 </head>
 
 <body class="theme-dark">
@@ -917,17 +917,65 @@
             <button type="button" class="rep-preset-pill" id="budget-pill-this" onclick="setBudgetTabMonthPreset('this')">📅 This Month</button>
             <button type="button" class="rep-preset-pill" id="budget-pill-next" onclick="setBudgetTabMonthPreset('next')" style="border-color: rgba(168, 85, 247, 0.45); color: #c084fc;">🗓️ Next Month</button>
             <button type="button" class="rep-preset-pill" id="budget-pill-plus2" onclick="setBudgetTabMonthPreset('plus2')">🗓️ +2 Months</button>
-            <input type="month" id="budget-tab-month-picker" class="form-control" style="width: 145px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="setBudgetTabCustomMonth(this.value)" title="Select any specific month" />
-            <select id="budget-tab-company-filter" class="form-control" style="width: 165px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="renderDedicatedBudgetTab()">
+            <input type="month" id="budget-tab-month-picker" class="form-control" style="width: 140px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="setBudgetTabCustomMonth(this.value)" title="Select any specific month" />
+            <select id="budget-tab-company-filter" class="form-control" style="width: 155px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="renderDedicatedBudgetTab()" title="Filter by Company">
               <option value="">🏢 All Companies</option>
             </select>
+            <select id="budget-tab-currency-filter" class="form-control" style="width: 125px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="renderDedicatedBudgetTab()" title="Filter by Currency">
+              <option value="">💱 All Currencies</option>
+            </select>
+            <select id="budget-tab-status-filter" class="form-control" style="width: 155px; font-size: 11.5px; padding: 4px 8px; height: 30px;" onchange="renderDedicatedBudgetTab()" title="Filter by Task Status">
+              <option value="all">📋 All Tasks (Open + Done)</option>
+              <option value="open">⏳ Wanted (Open) Only</option>
+              <option value="completed">✅ Realized (Done) Only</option>
+            </select>
             <button type="button" class="btn-sm" onclick="loadDedicatedBudgetTab(true)">🔄 Refresh</button>
-            <button type="button" class="btn-sm" onclick="exportBudgetTabCSV()" style="border-color: rgba(16, 185, 129, 0.45); color: var(--emerald); font-weight: 700;" title="Download CSV Report for Excel / Google Sheets">
+            <button type="button" class="btn-sm" onclick="exportBudgetTabCSV()" style="border-color: rgba(16, 185, 129, 0.45); color: var(--emerald); font-weight: 700;" title="Download CSV Report for Selected Parts & Filters">
               📥 Export CSV
             </button>
-            <button type="button" class="btn-action-primary" onclick="exportBudgetTabPDF()" style="padding: 6px 13px; font-size: 11.5px;" title="Open A4 Executive Budget & Wanted Breakdown PDF Print Studio">
+            <button type="button" class="btn-action-primary" onclick="exportBudgetTabPDF()" style="padding: 6px 13px; font-size: 11.5px;" title="Open A4 PDF Print Studio for Selected Parts & Filters">
               🖨️ Export PDF Report
             </button>
+          </div>
+        </div>
+
+        <!-- REPORT PART / SECTION SELECTOR & PRINT BUILDER BAR -->
+        <div style="padding: 10px 1.25rem; background: rgba(219, 0, 49, 0.04); border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 11px; font-weight: 800; font-family: var(--font-mono); color: var(--text-main); text-transform: uppercase;">
+              🖨️ Select Report Parts to View &amp; Print:
+            </span>
+            <select id="budget-report-part-preset" class="form-control" style="width: 245px; font-size: 11.5px; padding: 4px 8px; height: 29px; font-weight: 700;" onchange="applyBudgetSectionPreset(this.value)">
+              <option value="full">📑 Full Report (All Sections)</option>
+              <option value="summary_and_companies">🌐+🏢 Summary + Company-by-Company (No Tasks)</option>
+              <option value="only_companies">🏢 Only Company-by-Company Breakdown</option>
+              <option value="only_all_summary">🌐 Only All-Companies Combined Rollup</option>
+              <option value="only_tasks">📋 Only Scheduled Tasks Cost Ledger</option>
+              <option value="custom">⚙️ Custom Checked Parts...</option>
+            </select>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 11.5px;">
+            <label style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="budget-chk-kpis" checked onchange="onBudgetPartCheckboxChange()" style="accent-color: var(--red);" />
+              <span>📊 KPI Cards</span>
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="budget-chk-sec1" checked onchange="onBudgetPartCheckboxChange()" style="accent-color: var(--red);" />
+              <span>🌐 01. All-Companies Rollup</span>
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="budget-chk-sec2" checked onchange="onBudgetPartCheckboxChange()" style="accent-color: var(--red);" />
+              <span>🏢 02. Company-by-Company</span>
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="budget-chk-sec3" checked onchange="onBudgetPartCheckboxChange()" style="accent-color: var(--red);" />
+              <span>📋 03. Scheduled Tasks List</span>
+            </label>
+            <label style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+              <input type="checkbox" id="budget-chk-signoff" checked onchange="onBudgetPartCheckboxChange()" style="accent-color: var(--red);" />
+              <span>✍️ Sign-Off (PDF)</span>
+            </label>
           </div>
         </div>
 
@@ -938,12 +986,12 @@
             <strong id="budget-tab-scope-badge" style="color: var(--red); font-family: var(--font-mono);">All Scheduled Months</strong>
           </div>
           <div style="font-size: 11px; color: var(--text-dim);">
-            💡 Click any company card below to filter the task breakdown table by that company, or click <strong>+ New Job Assignment</strong> to schedule future-month tasks.
+            💡 Only the checked report parts and active filters above will be included when you click <strong>🖨️ Export PDF Report</strong> or <strong>📥 Export CSV</strong>.
           </div>
         </div>
 
         <!-- PART 1: ALL-COMPANIES COMBINED GRAND FINANCIAL ROLLUP -->
-        <div style="padding: 1.25rem;">
+        <div id="budget-panel-sec1" style="padding: 1.25rem;">
           <div style="font-size: 11px; font-weight: 800; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
             🌐 1. All-Companies Combined Rollup (Grouped by Currency)
           </div>
@@ -988,10 +1036,10 @@
       </div>
 
       <!-- PART 2: EACH COMPANY BY EACH COMPANY BREAKDOWN CARDS -->
-      <div class="panel-card" style="margin-bottom: 1.25rem;">
+      <div class="panel-card" id="budget-panel-cards" style="margin-bottom: 1.25rem;">
         <div class="panel-header">
           <div class="panel-title">
-            <span>🏢</span> 2. Company-by-Company Wanted &amp; Planned Breakdown Cards
+            <span>🏢</span> 2A. Company-by-Company Wanted &amp; Planned Breakdown Cards
           </div>
           <span style="font-size: 11px; color: var(--text-dim);" id="budget-company-count-label">All Registered Workspaces</span>
         </div>
@@ -1003,10 +1051,10 @@
       </div>
 
       <!-- PART 3: COMPANY-BY-COMPANY SUMMARY TABLE -->
-      <div class="panel-card" style="margin-bottom: 1.25rem;">
+      <div class="panel-card" id="budget-panel-sec2" style="margin-bottom: 1.25rem;">
         <div class="panel-header">
           <div class="panel-title">
-            <span>📊</span> 3. Company-by-Company Comparative Financial Table
+            <span>📊</span> 2B. Company-by-Company Comparative Financial Table
           </div>
         </div>
         <div class="table-responsive">
@@ -1031,10 +1079,10 @@
       </div>
 
       <!-- PART 4: SCHEDULED JOBS BREAKDOWN LIST FOR SELECTED MONTH & COMPANY -->
-      <div class="panel-card">
+      <div class="panel-card" id="budget-panel-sec3">
         <div class="panel-header">
           <div class="panel-title">
-            <span>📋</span> 4. Scheduled Tasks Contributing to This Breakdown
+            <span>📋</span> 3. Scheduled Tasks Contributing to This Breakdown
           </div>
           <span style="font-size: 11px; color: var(--text-dim);" id="budget-jobs-table-subtitle">Showing matching tasks</span>
         </div>
@@ -1902,7 +1950,7 @@
   <!-- =========================================================================
        FRONTEND CLIENT SCRIPT (API Integration, State & Reactivity)
        ========================================================================= -->
-  <script src="/js/platform-app.js?v=20261107-11"></script>
+  <script src="/js/platform-app.js?v=20261107-12"></script>
 </body>
 
 </html>

@@ -2639,7 +2639,13 @@
     const budgetTabState = {
       preset: 'all',
       selectedMonth: '',
-      selectedCompanyId: ''
+      selectedCompanyId: '',
+      partPreset: 'full',
+      includeKpis: true,
+      includeSec1: true,
+      includeSec2: true,
+      includeSec3: true,
+      includeSignoff: true
     };
 
     async function loadDedicatedBudgetTab(forceFetch = false) {
@@ -2656,7 +2662,90 @@
           compSelect.value = curVal;
         }
       }
+
+      const currSelect = document.getElementById('budget-tab-currency-filter');
+      if (currSelect && data && Array.isArray(data.companies)) {
+        const curCurr = currSelect.value;
+        const currencies = Array.from(new Set(data.companies.map(c => (c.currency || 'LKR').toUpperCase())));
+        currSelect.innerHTML = `<option value="">💱 All Currencies (${currencies.length})</option>` +
+          currencies.map(curr => `<option value="${curr}">💱 ${curr} Only</option>`).join('');
+        if (curCurr && currencies.includes(curCurr)) {
+          currSelect.value = curCurr;
+        }
+      }
+
       renderDedicatedBudgetTab();
+    }
+
+    function applyBudgetSectionPreset(presetVal) {
+      budgetTabState.partPreset = presetVal || 'full';
+      const setChk = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = val;
+      };
+
+      if (presetVal === 'full') {
+        setChk('budget-chk-kpis', true);
+        setChk('budget-chk-sec1', true);
+        setChk('budget-chk-sec2', true);
+        setChk('budget-chk-sec3', true);
+        setChk('budget-chk-signoff', true);
+      } else if (presetVal === 'summary_and_companies') {
+        setChk('budget-chk-kpis', true);
+        setChk('budget-chk-sec1', true);
+        setChk('budget-chk-sec2', true);
+        setChk('budget-chk-sec3', false);
+        setChk('budget-chk-signoff', true);
+      } else if (presetVal === 'only_companies') {
+        setChk('budget-chk-kpis', false);
+        setChk('budget-chk-sec1', false);
+        setChk('budget-chk-sec2', true);
+        setChk('budget-chk-sec3', false);
+        setChk('budget-chk-signoff', true);
+      } else if (presetVal === 'only_all_summary') {
+        setChk('budget-chk-kpis', true);
+        setChk('budget-chk-sec1', true);
+        setChk('budget-chk-sec2', false);
+        setChk('budget-chk-sec3', false);
+        setChk('budget-chk-signoff', true);
+      } else if (presetVal === 'only_tasks') {
+        setChk('budget-chk-kpis', false);
+        setChk('budget-chk-sec1', false);
+        setChk('budget-chk-sec2', false);
+        setChk('budget-chk-sec3', true);
+        setChk('budget-chk-signoff', true);
+      }
+
+      syncBudgetSectionVisibility();
+    }
+
+    function onBudgetPartCheckboxChange() {
+      const presetEl = document.getElementById('budget-report-part-preset');
+      if (presetEl) presetEl.value = 'custom';
+      budgetTabState.partPreset = 'custom';
+      syncBudgetSectionVisibility();
+    }
+
+    function syncBudgetSectionVisibility() {
+      const getChk = (id, def = true) => {
+        const el = document.getElementById(id);
+        return el ? el.checked : def;
+      };
+      budgetTabState.includeKpis = getChk('budget-chk-kpis', true);
+      budgetTabState.includeSec1 = getChk('budget-chk-sec1', true);
+      budgetTabState.includeSec2 = getChk('budget-chk-sec2', true);
+      budgetTabState.includeSec3 = getChk('budget-chk-sec3', true);
+      budgetTabState.includeSignoff = getChk('budget-chk-signoff', true);
+
+      const pSec1 = document.getElementById('budget-panel-sec1');
+      const pCards = document.getElementById('budget-panel-cards');
+      const pSec2 = document.getElementById('budget-panel-sec2');
+      const pSec3 = document.getElementById('budget-panel-sec3');
+
+      if (pSec1) pSec1.style.display = (budgetTabState.includeKpis || budgetTabState.includeSec1) ? 'block' : 'none';
+      if (pCards) pCards.style.display = budgetTabState.includeSec2 ? 'block' : 'none';
+      if (pSec2) pSec2.style.display = budgetTabState.includeSec2 ? 'block' : 'none';
+      if (pSec3) pSec3.style.display = budgetTabState.includeSec3 ? 'block' : 'none';
     }
 
     function setBudgetTabMonthPreset(preset) {
@@ -2702,270 +2791,16 @@
       renderDedicatedBudgetTab();
     }
 
-    function renderDedicatedBudgetTab() {
-      const data = notifState.data;
-      if (!data || !Array.isArray(data.items)) return;
-
-      const selectedMonth = budgetTabState.selectedMonth || '';
-      const compSelect = document.getElementById('budget-tab-company-filter');
-      const selectedCompId = compSelect ? compSelect.value : '';
-
-      const fmtMonthNice = (ym) => {
-        if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return 'All Scheduled Months';
-        const [y, m] = ym.split('-').map(Number);
-        return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      };
-
-      // Filter items by selected month
-      const monthItems = data.items.filter(item => {
-        if (selectedMonth && item.dueMonth !== selectedMonth) return false;
-        return true;
-      });
-
-      const scopeBadge = document.getElementById('budget-tab-scope-badge');
-      if (scopeBadge) {
-        scopeBadge.textContent = `${fmtMonthNice(selectedMonth)} (${monthItems.length} Scheduled Tasks)`;
-      }
-
-      // 1. Aggregate All-Companies Grand Rollup & Each-Company Breakdown
-      const grandCurrencyMap = {};
-      const byCompanyMap = {};
-      let grandOpenTasks = 0;
-      let grandDoneTasks = 0;
-
-      (data.companies || []).forEach(c => {
-        byCompanyMap[c.id] = {
-          id: c.id,
-          name: c.name,
-          category: c.category || 'Workspace',
-          currency: (c.currency || 'LKR').toUpperCase(),
-          openCount: 0,
-          doneCount: 0,
-          totalCount: 0,
-          wantedValue: 0,
-          realizedValue: 0,
-          plannedValue: 0
-        };
-      });
-
-      monthItems.forEach(item => {
-        const curr = (item.currency || 'LKR').toUpperCase();
-        const isDone = item.category === 'completed';
-        const val = Number(item.statedValue) || 0;
-
-        if (!grandCurrencyMap[curr]) {
-          grandCurrencyMap[curr] = { wanted: 0, realized: 0, planned: 0 };
-        }
-        grandCurrencyMap[curr].planned += val;
-        if (!isDone) {
-          grandCurrencyMap[curr].wanted += val;
-          grandOpenTasks += 1;
-        } else {
-          grandCurrencyMap[curr].realized += val;
-          grandDoneTasks += 1;
-        }
-
-        if (!byCompanyMap[item.companyId]) {
-          byCompanyMap[item.companyId] = {
-            id: item.companyId,
-            name: item.companyName,
-            category: item.companyCategory || 'Workspace',
-            currency: curr,
-            openCount: 0,
-            doneCount: 0,
-            totalCount: 0,
-            wantedValue: 0,
-            realizedValue: 0,
-            plannedValue: 0
-          };
-        }
-        const compEntry = byCompanyMap[item.companyId];
-        compEntry.totalCount += 1;
-        compEntry.plannedValue += val;
-        if (!isDone) {
-          compEntry.openCount += 1;
-          compEntry.wantedValue += val;
-        } else {
-          compEntry.doneCount += 1;
-          compEntry.realizedValue += val;
-        }
-      });
-
-      const fmtGrandField = (field) => {
-        const entries = Object.entries(grandCurrencyMap);
-        if (!entries.length) return 'LKR 0.00';
-        return entries.map(([curr, obj]) => formatLKR(obj[field] || 0, curr)).join(' + ');
-      };
-
-      const setTxt = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val;
-      };
-
-      setTxt('budget-grand-wanted', fmtGrandField('wanted'));
-      setTxt('budget-grand-wanted-sub', `${grandOpenTasks} open / pending task(s) across ${(data.companies || []).length} companies`);
-      setTxt('budget-grand-realized', fmtGrandField('realized'));
-      setTxt('budget-grand-realized-sub', `${grandDoneTasks} completed task(s) across ${(data.companies || []).length} companies`);
-      setTxt('budget-grand-planned', fmtGrandField('planned'));
-      setTxt('budget-grand-planned-sub', `${monthItems.length} total scheduled task(s) in ${fmtMonthNice(selectedMonth)}`);
-
-      // 2. Render Company-by-Company Cards
-      const compList = Object.values(byCompanyMap);
-      setTxt('budget-company-count-label', `${compList.length} Registered Workspaces`);
-
-      const cardsContainer = document.getElementById('budget-each-company-cards');
-      if (cardsContainer) {
-        if (!compList.length) {
-          cardsContainer.innerHTML = '<div style="color: var(--text-dim); padding: 16px;">No companies registered yet.</div>';
-        } else {
-          cardsContainer.innerHTML = compList.map(comp => {
-            const isSelected = selectedCompId === comp.id;
-            const pctDone = comp.totalCount > 0 ? Math.round((comp.doneCount / comp.totalCount) * 100) : 0;
-            const borderStyle = isSelected
-              ? 'border: 2px solid var(--red); background: rgba(219, 0, 49, 0.07);'
-              : 'border: 1px solid var(--border-color); background: var(--bg-surface);';
-
-            return `
-              <div onclick="toggleBudgetTabCompanyCard('${comp.id}')" title="Click to filter task list by ${comp.name}" style="${borderStyle} border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all 0.15s ease;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px;">
-                  <div>
-                    <div style="font-weight: 800; font-size: 14px; color: var(--text-main);">🏢 ${comp.name}</div>
-                    <div style="font-size: 11px; color: var(--text-dim);">${comp.category}</div>
-                  </div>
-                  <span style="font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted);">
-                    ${comp.currency}
-                  </span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--border-subtle);">
-                  <span style="font-size: 11.5px; color: var(--text-dim);">⏳ Wanted (Open):</span>
-                  <strong style="font-family: var(--font-mono); font-size: 14px; color: #f59e0b;">${formatLKR(comp.wantedValue, comp.currency)}</strong>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0;">
-                  <span style="font-size: 11.5px; color: var(--text-dim);">✅ Realized (Done):</span>
-                  <strong style="font-family: var(--font-mono); font-size: 12.5px; color: var(--emerald);">${formatLKR(comp.realizedValue, comp.currency)}</strong>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0 8px; border-top: 1px dashed var(--border-subtle);">
-                  <span style="font-size: 11.5px; font-weight: 700; color: var(--text-main);">📋 Total Planned:</span>
-                  <strong style="font-family: var(--font-mono); font-size: 13px; color: var(--text-main);">${formatLKR(comp.plannedValue, comp.currency)}</strong>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: var(--text-dim); font-family: var(--font-mono);">
-                  <span>${comp.openCount} Open · ${comp.doneCount} Done (${comp.totalCount} Total)</span>
-                  <span>${pctDone}% Done</span>
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
-      }
-
-      // 3. Render Company-by-Company Comparative Table
-      const compTbody = document.getElementById('budget-company-table-tbody');
-      const compTfoot = document.getElementById('budget-company-table-tfoot');
-      if (compTbody) {
-        if (!compList.length) {
-          compTbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-dim);">No workspaces found.</td></tr>';
-          if (compTfoot) compTfoot.innerHTML = '';
-        } else {
-          compTbody.innerHTML = compList.map(comp => `
-            <tr>
-              <td>
-                <div style="font-weight: 700; color: var(--text-main);">🏢 ${comp.name}</div>
-                <div style="font-size: 11px; color: var(--text-dim);">${comp.category}</div>
-              </td>
-              <td style="text-align: center; font-family: var(--font-mono); font-weight: 700;">${comp.currency}</td>
-              <td style="text-align: center; font-family: var(--font-mono); color: #f59e0b; font-weight: 700;">${comp.openCount}</td>
-              <td style="text-align: center; font-family: var(--font-mono); color: var(--emerald);">${comp.doneCount}</td>
-              <td style="text-align: center; font-family: var(--font-mono);">${comp.totalCount}</td>
-              <td style="text-align: right; font-family: var(--font-mono); font-weight: 800; color: #f59e0b;">${formatLKR(comp.wantedValue, comp.currency)}</td>
-              <td style="text-align: right; font-family: var(--font-mono); color: var(--emerald);">${formatLKR(comp.realizedValue, comp.currency)}</td>
-              <td style="text-align: right; font-family: var(--font-mono); font-weight: 700;">${formatLKR(comp.plannedValue, comp.currency)}</td>
-              <td style="text-align: right;">
-                <button type="button" class="btn-sm" onclick="toggleBudgetTabCompanyCard('${comp.id}')">
-                  ${selectedCompId === comp.id ? '✓ Filtered' : '🔍 Filter Tasks'}
-                </button>
-              </td>
-            </tr>
-          `).join('');
-
-          if (compTfoot) {
-            compTfoot.innerHTML = `
-              <tr style="background: rgba(219, 0, 49, 0.06); font-weight: 800; border-top: 2px solid var(--border-color);">
-                <td>ALL COMPANIES COMBINED (${compList.length})</td>
-                <td style="text-align: center; font-family: var(--font-mono);">MULTI</td>
-                <td style="text-align: center; font-family: var(--font-mono); color: #f59e0b;">${grandOpenTasks}</td>
-                <td style="text-align: center; font-family: var(--font-mono); color: var(--emerald);">${grandDoneTasks}</td>
-                <td style="text-align: center; font-family: var(--font-mono);">${monthItems.length}</td>
-                <td style="text-align: right; font-family: var(--font-mono); color: #f59e0b;">${fmtGrandField('wanted')}</td>
-                <td style="text-align: right; font-family: var(--font-mono); color: var(--emerald);">${fmtGrandField('realized')}</td>
-                <td style="text-align: right; font-family: var(--font-mono);">${fmtGrandField('planned')}</td>
-                <td></td>
-              </tr>
-            `;
-          }
-        }
-      }
-
-      // 4. Render Matching Scheduled Jobs Table
-      const filteredJobs = monthItems.filter(item => {
-        if (selectedCompId && item.companyId !== selectedCompId) return false;
-        return true;
-      });
-
-      setTxt('budget-jobs-table-subtitle', `Showing ${filteredJobs.length} scheduled task(s) in ${fmtMonthNice(selectedMonth)}${selectedCompId ? ' (Filtered by selected company)' : ' across all companies'}`);
-
-      const jobsTbody = document.getElementById('budget-jobs-table-tbody');
-      if (jobsTbody) {
-        if (!filteredJobs.length) {
-          jobsTbody.innerHTML = `
-            <tr>
-              <td colspan="8" style="text-align: center; padding: 32px; color: var(--text-dim);">
-                No scheduled tasks found for ${fmtMonthNice(selectedMonth)}. Click <strong>+ New Job Assignment</strong> in the top bar to schedule future-month tasks.
-              </td>
-            </tr>
-          `;
-        } else {
-          jobsTbody.innerHTML = filteredJobs.map(item => {
-            const isDone = item.category === 'completed';
-            const statusBadge = isDone
-              ? '<span class="chip chip-green">COMPLETED</span>'
-              : `<span class="chip ${item.badgeClass}">${item.timeLabel}</span>`;
-            return `
-              <tr>
-                <td>
-                  <strong>🏢 ${item.companyName}</strong>
-                  <div style="font-size: 10px; color: var(--text-dim); font-family: var(--font-mono);">${item.currency}</div>
-                </td>
-                <td style="font-family: var(--font-mono); font-weight: 700; color: var(--red);">#${item.jobCode}</td>
-                <td><strong>${item.title}</strong></td>
-                <td>${item.employeeName} <span style="font-size: 11px; color: var(--text-dim);">(${item.employeeRole || 'Staff'})</span></td>
-                <td style="font-family: var(--font-mono); font-size: 11.5px;">${formatDate(item.currentDueDate)}</td>
-                <td>${statusBadge}</td>
-                <td style="text-align: right; font-family: var(--font-mono); font-weight: 800; color: ${isDone ? 'var(--emerald)' : '#f59e0b'};">
-                  ${formatLKR(item.statedValue, item.currency)}
-                </td>
-                <td style="text-align: right;">
-                  <div style="display: flex; gap: 5px; justify-content: flex-end;">
-                    <button type="button" class="btn-sm btn-status-quick" onclick="notifOpenJobStatus('${item.companyId}', '${item.id}')" title="Change Status or Update Job Price">
-                      ⚡ Status &amp; Price
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            `;
-          }).join('');
-        }
-      }
-    }
-
     function buildBudgetExportSnapshot() {
+      syncBudgetSectionVisibility();
       const data = notifState.data || { companies: [], items: [] };
       const selectedMonth = budgetTabState.selectedMonth || '';
       const compSelect = document.getElementById('budget-tab-company-filter');
       const selectedCompId = compSelect ? compSelect.value : '';
+      const currSelect = document.getElementById('budget-tab-currency-filter');
+      const selectedCurr = currSelect ? currSelect.value : '';
+      const statusSelect = document.getElementById('budget-tab-status-filter');
+      const selectedStatus = statusSelect ? statusSelect.value : 'all';
 
       const fmtMonthNice = (ym) => {
         if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return 'All Scheduled Months';
@@ -2973,23 +2808,20 @@
         return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
       };
 
-      const monthItems = (data.items || []).filter(item => {
-        if (selectedMonth && item.dueMonth !== selectedMonth) return false;
-        return true;
-      });
-
       const grandCurrencyMap = {};
       const byCompanyMap = {};
       let grandOpenTasks = 0;
       let grandDoneTasks = 0;
 
       (data.companies || []).forEach(c => {
+        const cCurr = (c.currency || 'LKR').toUpperCase();
         if (selectedCompId && c.id !== selectedCompId) return;
+        if (selectedCurr && cCurr !== selectedCurr) return;
         byCompanyMap[c.id] = {
           id: c.id,
           name: c.name,
           category: c.category || 'Workspace',
-          currency: (c.currency || 'LKR').toUpperCase(),
+          currency: cCurr,
           openCount: 0,
           doneCount: 0,
           totalCount: 0,
@@ -2999,8 +2831,14 @@
         };
       });
 
-      const scopedItems = monthItems.filter(item => {
+      const scopedItems = (data.items || []).filter(item => {
+        if (selectedMonth && item.dueMonth !== selectedMonth) return false;
         if (selectedCompId && item.companyId !== selectedCompId) return false;
+        const iCurr = (item.currency || 'LKR').toUpperCase();
+        if (selectedCurr && iCurr !== selectedCurr) return false;
+        const isDone = item.category === 'completed';
+        if (selectedStatus === 'open' && isDone) return false;
+        if (selectedStatus === 'completed' && !isDone) return false;
         return true;
       });
 
@@ -3052,7 +2890,7 @@
 
       const fmtGrandField = (field) => {
         const entries = Object.entries(grandCurrencyMap);
-        if (!entries.length) return 'LKR 0.00';
+        if (!entries.length) return selectedCurr ? formatLKR(0, selectedCurr) : 'LKR 0.00';
         return entries.map(([curr, obj]) => formatLKR(obj[field] || 0, curr)).join(' + ');
       };
 
@@ -3060,12 +2898,22 @@
         ? (data.companies || []).find(c => c.id === selectedCompId)
         : null;
 
+      const statusLabelMap = {
+        all: 'All Tasks (Open + Completed)',
+        open: 'Wanted (Open) Tasks Only',
+        completed: 'Realized (Completed) Tasks Only'
+      };
+
       return {
         scopeTitle: fmtMonthNice(selectedMonth),
         selectedMonth,
+        selectedCompId,
+        selectedCurr,
+        selectedStatus,
+        statusScopeLabel: statusLabelMap[selectedStatus] || 'All Tasks',
         companyScopeLabel: selectedCompanyObj
           ? `${selectedCompanyObj.name} (${selectedCompanyObj.currency})`
-          : `All Registered Companies (${Object.keys(byCompanyMap).length})`,
+          : `All Matching Companies (${Object.keys(byCompanyMap).length})`,
         grandCurrencyMap,
         compList: Object.values(byCompanyMap),
         scopedItems,
@@ -3074,8 +2922,182 @@
         grandTotalTasks: scopedItems.length,
         grandWantedStr: fmtGrandField('wanted'),
         grandRealizedStr: fmtGrandField('realized'),
-        grandPlannedStr: fmtGrandField('planned')
+        grandPlannedStr: fmtGrandField('planned'),
+        includeKpis: budgetTabState.includeKpis,
+        includeSec1: budgetTabState.includeSec1,
+        includeSec2: budgetTabState.includeSec2,
+        includeSec3: budgetTabState.includeSec3,
+        includeSignoff: budgetTabState.includeSignoff
       };
+    }
+
+    function renderDedicatedBudgetTab() {
+      if (!notifState.data) return;
+      const snap = buildBudgetExportSnapshot();
+
+      const setTxt = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+      };
+
+      setTxt(
+        'budget-tab-scope-badge',
+        `${snap.scopeTitle} · ${snap.companyScopeLabel} · ${snap.statusScopeLabel} (${snap.grandTotalTasks} Tasks)`
+      );
+
+      setTxt('budget-grand-wanted', snap.grandWantedStr);
+      setTxt('budget-grand-wanted-sub', `${snap.grandOpenTasks} open / pending task(s) across ${snap.compList.length} workspace(s)`);
+      setTxt('budget-grand-realized', snap.grandRealizedStr);
+      setTxt('budget-grand-realized-sub', `${snap.grandDoneTasks} completed task(s) across ${snap.compList.length} workspace(s)`);
+      setTxt('budget-grand-planned', snap.grandPlannedStr);
+      setTxt('budget-grand-planned-sub', `${snap.grandTotalTasks} matching task(s) in ${snap.scopeTitle}`);
+
+      // Render Company-by-Company Cards
+      const compList = snap.compList;
+      setTxt('budget-company-count-label', `${compList.length} Matching Workspace(s)`);
+
+      const cardsContainer = document.getElementById('budget-each-company-cards');
+      if (cardsContainer) {
+        if (!compList.length) {
+          cardsContainer.innerHTML = '<div style="color: var(--text-dim); padding: 16px;">No companies match the active filters.</div>';
+        } else {
+          cardsContainer.innerHTML = compList.map(comp => {
+            const isSelected = snap.selectedCompId === comp.id;
+            const pctDone = comp.totalCount > 0 ? Math.round((comp.doneCount / comp.totalCount) * 100) : 0;
+            const borderStyle = isSelected
+              ? 'border: 2px solid var(--red); background: rgba(219, 0, 49, 0.07);'
+              : 'border: 1px solid var(--border-color); background: var(--bg-surface);';
+
+            return `
+              <div onclick="toggleBudgetTabCompanyCard('${comp.id}')" title="Click to filter by ${comp.name}" style="${borderStyle} border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all 0.15s ease;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px;">
+                  <div>
+                    <div style="font-weight: 800; font-size: 14px; color: var(--text-main);">🏢 ${comp.name}</div>
+                    <div style="font-size: 11px; color: var(--text-dim);">${comp.category}</div>
+                  </div>
+                  <span style="font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: rgba(255,255,255,0.06); color: var(--text-muted);">
+                    ${comp.currency}
+                  </span>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--border-subtle);">
+                  <span style="font-size: 11.5px; color: var(--text-dim);">⏳ Wanted (Open):</span>
+                  <strong style="font-family: var(--font-mono); font-size: 14px; color: #f59e0b;">${formatLKR(comp.wantedValue, comp.currency)}</strong>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0;">
+                  <span style="font-size: 11.5px; color: var(--text-dim);">✅ Realized (Done):</span>
+                  <strong style="font-family: var(--font-mono); font-size: 12.5px; color: var(--emerald);">${formatLKR(comp.realizedValue, comp.currency)}</strong>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0 8px; border-top: 1px dashed var(--border-subtle);">
+                  <span style="font-size: 11.5px; font-weight: 700; color: var(--text-main);">📋 Total Planned:</span>
+                  <strong style="font-family: var(--font-mono); font-size: 13px; color: var(--text-main);">${formatLKR(comp.plannedValue, comp.currency)}</strong>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: var(--text-dim); font-family: var(--font-mono);">
+                  <span>${comp.openCount} Open · ${comp.doneCount} Done (${comp.totalCount} Total)</span>
+                  <span>${pctDone}% Done</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // Render Company-by-Company Comparative Table
+      const compTbody = document.getElementById('budget-company-table-tbody');
+      const compTfoot = document.getElementById('budget-company-table-tfoot');
+      if (compTbody) {
+        if (!compList.length) {
+          compTbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:24px; color:var(--text-dim);">No workspaces match the active filters.</td></tr>';
+          if (compTfoot) compTfoot.innerHTML = '';
+        } else {
+          compTbody.innerHTML = compList.map(comp => `
+            <tr>
+              <td>
+                <div style="font-weight: 700; color: var(--text-main);">🏢 ${comp.name}</div>
+                <div style="font-size: 11px; color: var(--text-dim);">${comp.category}</div>
+              </td>
+              <td style="text-align: center; font-family: var(--font-mono); font-weight: 700;">${comp.currency}</td>
+              <td style="text-align: center; font-family: var(--font-mono); color: #f59e0b; font-weight: 700;">${comp.openCount}</td>
+              <td style="text-align: center; font-family: var(--font-mono); color: var(--emerald);">${comp.doneCount}</td>
+              <td style="text-align: center; font-family: var(--font-mono);">${comp.totalCount}</td>
+              <td style="text-align: right; font-family: var(--font-mono); font-weight: 800; color: #f59e0b;">${formatLKR(comp.wantedValue, comp.currency)}</td>
+              <td style="text-align: right; font-family: var(--font-mono); color: var(--emerald);">${formatLKR(comp.realizedValue, comp.currency)}</td>
+              <td style="text-align: right; font-family: var(--font-mono); font-weight: 700;">${formatLKR(comp.plannedValue, comp.currency)}</td>
+              <td style="text-align: right;">
+                <button type="button" class="btn-sm" onclick="toggleBudgetTabCompanyCard('${comp.id}')">
+                  ${snap.selectedCompId === comp.id ? '✓ Filtered' : '🔍 Filter Tasks'}
+                </button>
+              </td>
+            </tr>
+          `).join('');
+
+          if (compTfoot) {
+            compTfoot.innerHTML = `
+              <tr style="background: rgba(219, 0, 49, 0.06); font-weight: 800; border-top: 2px solid var(--border-color);">
+                <td>ALL MATCHING COMPANIES (${compList.length})</td>
+                <td style="text-align: center; font-family: var(--font-mono);">${snap.selectedCurr || 'MULTI'}</td>
+                <td style="text-align: center; font-family: var(--font-mono); color: #f59e0b;">${snap.grandOpenTasks}</td>
+                <td style="text-align: center; font-family: var(--font-mono); color: var(--emerald);">${snap.grandDoneTasks}</td>
+                <td style="text-align: center; font-family: var(--font-mono);">${snap.grandTotalTasks}</td>
+                <td style="text-align: right; font-family: var(--font-mono); color: #f59e0b;">${snap.grandWantedStr}</td>
+                <td style="text-align: right; font-family: var(--font-mono); color: var(--emerald);">${snap.grandRealizedStr}</td>
+                <td style="text-align: right; font-family: var(--font-mono);">${snap.grandPlannedStr}</td>
+                <td></td>
+              </tr>
+            `;
+          }
+        }
+      }
+
+      // Render Matching Scheduled Jobs Table
+      const filteredJobs = snap.scopedItems;
+      setTxt('budget-jobs-table-subtitle', `Showing ${filteredJobs.length} task(s) · ${snap.scopeTitle} · ${snap.statusScopeLabel}`);
+
+      const jobsTbody = document.getElementById('budget-jobs-table-tbody');
+      if (jobsTbody) {
+        if (!filteredJobs.length) {
+          jobsTbody.innerHTML = `
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 32px; color: var(--text-dim);">
+                No scheduled tasks match the selected filters (${snap.scopeTitle} · ${snap.statusScopeLabel}).
+              </td>
+            </tr>
+          `;
+        } else {
+          jobsTbody.innerHTML = filteredJobs.map(item => {
+            const isDone = item.category === 'completed';
+            const statusBadge = isDone
+              ? '<span class="chip chip-green">COMPLETED</span>'
+              : `<span class="chip ${item.badgeClass}">${item.timeLabel}</span>`;
+            return `
+              <tr>
+                <td>
+                  <strong>🏢 ${item.companyName}</strong>
+                  <div style="font-size: 10px; color: var(--text-dim); font-family: var(--font-mono);">${item.currency}</div>
+                </td>
+                <td style="font-family: var(--font-mono); font-weight: 700; color: var(--red);">#${item.jobCode}</td>
+                <td><strong>${item.title}</strong></td>
+                <td>${item.employeeName} <span style="font-size: 11px; color: var(--text-dim);">(${item.employeeRole || 'Staff'})</span></td>
+                <td style="font-family: var(--font-mono); font-size: 11.5px;">${formatDate(item.currentDueDate)}</td>
+                <td>${statusBadge}</td>
+                <td style="text-align: right; font-family: var(--font-mono); font-weight: 800; color: ${isDone ? 'var(--emerald)' : '#f59e0b'};">
+                  ${formatLKR(item.statedValue, item.currency)}
+                </td>
+                <td style="text-align: right;">
+                  <div style="display: flex; gap: 5px; justify-content: flex-end;">
+                    <button type="button" class="btn-sm btn-status-quick" onclick="notifOpenJobStatus('${item.companyId}', '${item.id}')" title="Change Status or Update Job Price">
+                      ⚡ Status &amp; Price
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
     }
 
     async function exportBudgetTabCSV() {
@@ -3092,81 +3114,92 @@
       };
 
       const lines = [];
-      lines.push(['KOART SOLUTIONS — ALL-COMPANIES & COMPANY-BY-COMPANY FINANCIAL / WANTED BREAKDOWN REPORT'].map(escCsv).join(','));
-      lines.push(['Active Month Scope', snap.scopeTitle, 'Workspace Scope', snap.companyScopeLabel, 'Generated At', new Date().toISOString()].map(escCsv).join(','));
-      lines.push('');
-
-      // Section 1: All-Companies Combined Rollup by Currency
-      lines.push(['SECTION 1: ALL-COMPANIES COMBINED ROLLUP (BY CURRENCY)'].map(escCsv).join(','));
-      lines.push(['Currency', 'Open Tasks', 'Completed Tasks', 'Total Tasks', 'Wanted (Open) Amount', 'Realized (Done) Amount', 'Total Planned Budget'].map(escCsv).join(','));
-      const currEntries = Object.entries(snap.grandCurrencyMap);
-      if (!currEntries.length) {
-        lines.push(['LKR', 0, 0, 0, '0.00', '0.00', '0.00'].map(escCsv).join(','));
-      } else {
-        currEntries.forEach(([curr, obj]) => {
-          lines.push([
-            curr,
-            obj.openCount,
-            obj.doneCount,
-            obj.totalCount,
-            Number(obj.wanted || 0).toFixed(2),
-            Number(obj.realized || 0).toFixed(2),
-            Number(obj.planned || 0).toFixed(2)
-          ].map(escCsv).join(','));
-        });
-      }
-      lines.push('');
-
-      // Section 2: Company-by-Company Breakdown
-      lines.push(['SECTION 2: COMPANY-BY-COMPANY FINANCIAL & WANTED BREAKDOWN'].map(escCsv).join(','));
-      lines.push(['Company Name', 'Category', 'Currency', 'Open Tasks', 'Completed Tasks', 'Total Tasks', 'Wanted (Open) Amount', 'Realized (Done) Amount', 'Total Planned Budget'].map(escCsv).join(','));
-      snap.compList.forEach(c => {
-        lines.push([
-          c.name,
-          c.category,
-          c.currency,
-          c.openCount,
-          c.doneCount,
-          c.totalCount,
-          Number(c.wantedValue || 0).toFixed(2),
-          Number(c.realizedValue || 0).toFixed(2),
-          Number(c.plannedValue || 0).toFixed(2)
-        ].map(escCsv).join(','));
-      });
+      lines.push(['KOART SOLUTIONS — CUSTOMIZED BUDGET & WANTED FINANCIAL REPORT'].map(escCsv).join(','));
       lines.push([
-        `ALL COMPANIES COMBINED (${snap.compList.length})`,
-        'Consolidated Rollup',
-        'MULTI',
-        snap.grandOpenTasks,
-        snap.grandDoneTasks,
-        snap.grandTotalTasks,
-        snap.grandWantedStr,
-        snap.grandRealizedStr,
-        snap.grandPlannedStr
+        'Active Month Scope', snap.scopeTitle,
+        'Workspace Scope', snap.companyScopeLabel,
+        'Task Status Filter', snap.statusScopeLabel,
+        'Generated At', new Date().toISOString()
       ].map(escCsv).join(','));
       lines.push('');
 
-      // Section 3: Scheduled Tasks Detailed Ledger
-      lines.push(['SECTION 3: SCHEDULED TASKS CONTRIBUTING TO THIS BREAKDOWN'].map(escCsv).join(','));
-      lines.push(['Company Name', 'Currency', 'Job Code', 'Task Title', 'Assigned Staff', 'Staff Role', 'Scheduled Due Date', 'Due Month', 'Status', 'Wanted (Open) Amount', 'Realized (Done) Amount', 'Job Cost / Planned Value'].map(escCsv).join(','));
-      snap.scopedItems.forEach(item => {
-        const isDone = item.category === 'completed';
-        const val = Number(item.statedValue || 0).toFixed(2);
+      // Section 1: All-Companies Combined Rollup by Currency (Only if checked)
+      if (snap.includeSec1 || snap.includeKpis) {
+        lines.push(['SECTION 01: ALL-COMPANIES COMBINED ROLLUP (BY CURRENCY)'].map(escCsv).join(','));
+        lines.push(['Currency', 'Open Tasks', 'Completed Tasks', 'Total Tasks', 'Wanted (Open) Amount', 'Realized (Done) Amount', 'Total Planned Budget'].map(escCsv).join(','));
+        const currEntries = Object.entries(snap.grandCurrencyMap);
+        if (!currEntries.length) {
+          lines.push([snap.selectedCurr || 'LKR', 0, 0, 0, '0.00', '0.00', '0.00'].map(escCsv).join(','));
+        } else {
+          currEntries.forEach(([curr, obj]) => {
+            lines.push([
+              curr,
+              obj.openCount,
+              obj.doneCount,
+              obj.totalCount,
+              Number(obj.wanted || 0).toFixed(2),
+              Number(obj.realized || 0).toFixed(2),
+              Number(obj.planned || 0).toFixed(2)
+            ].map(escCsv).join(','));
+          });
+        }
+        lines.push('');
+      }
+
+      // Section 2: Company-by-Company Breakdown (Only if checked)
+      if (snap.includeSec2) {
+        lines.push(['SECTION 02: COMPANY-BY-COMPANY FINANCIAL & WANTED BREAKDOWN'].map(escCsv).join(','));
+        lines.push(['Company Name', 'Category', 'Currency', 'Open Tasks', 'Completed Tasks', 'Total Tasks', 'Wanted (Open) Amount', 'Realized (Done) Amount', 'Total Planned Budget'].map(escCsv).join(','));
+        snap.compList.forEach(c => {
+          lines.push([
+            c.name,
+            c.category,
+            c.currency,
+            c.openCount,
+            c.doneCount,
+            c.totalCount,
+            Number(c.wantedValue || 0).toFixed(2),
+            Number(c.realizedValue || 0).toFixed(2),
+            Number(c.plannedValue || 0).toFixed(2)
+          ].map(escCsv).join(','));
+        });
         lines.push([
-          item.companyName,
-          item.currency,
-          item.jobCode,
-          item.title,
-          item.employeeName,
-          item.employeeRole || 'Staff',
-          item.currentDueDate || '',
-          item.dueMonth || '',
-          isDone ? 'COMPLETED' : (item.status || 'OPEN').toUpperCase(),
-          isDone ? '0.00' : val,
-          isDone ? val : '0.00',
-          val
+          `ALL MATCHING COMPANIES (${snap.compList.length})`,
+          'Consolidated Rollup',
+          snap.selectedCurr || 'MULTI',
+          snap.grandOpenTasks,
+          snap.grandDoneTasks,
+          snap.grandTotalTasks,
+          snap.grandWantedStr,
+          snap.grandRealizedStr,
+          snap.grandPlannedStr
         ].map(escCsv).join(','));
-      });
+        lines.push('');
+      }
+
+      // Section 3: Scheduled Tasks Detailed Ledger (Only if checked)
+      if (snap.includeSec3) {
+        lines.push(['SECTION 03: SCHEDULED TASKS CONTRIBUTING TO THIS BREAKDOWN'].map(escCsv).join(','));
+        lines.push(['Company Name', 'Currency', 'Job Code', 'Task Title', 'Assigned Staff', 'Staff Role', 'Scheduled Due Date', 'Due Month', 'Status', 'Wanted (Open) Amount', 'Realized (Done) Amount', 'Job Cost / Planned Value'].map(escCsv).join(','));
+        snap.scopedItems.forEach(item => {
+          const isDone = item.category === 'completed';
+          const val = Number(item.statedValue || 0).toFixed(2);
+          lines.push([
+            item.companyName,
+            item.currency,
+            item.jobCode,
+            item.title,
+            item.employeeName,
+            item.employeeRole || 'Staff',
+            item.currentDueDate || '',
+            item.dueMonth || '',
+            isDone ? 'COMPLETED' : (item.status || 'OPEN').toUpperCase(),
+            isDone ? '0.00' : val,
+            isDone ? val : '0.00',
+            val
+          ].map(escCsv).join(','));
+        });
+      }
 
       const csvContent = '\uFEFF' + lines.join('\r\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -3262,9 +3295,9 @@
               </tr>
             `;
           }).join('')
-        : `<tr><td colspan="7" style="text-align: center; padding: 18px; color: #64748b;">No scheduled tasks found in ${snap.scopeTitle}.</td></tr>`;
+        : `<tr><td colspan="7" style="text-align: center; padding: 18px; color: #64748b;">No scheduled tasks match the active filters in ${snap.scopeTitle}.</td></tr>`;
 
-      const printWindow = window.open('', '_blank', 'width=1140,height=880,scrollbars=yes,resizable=yes');
+      const printWindow = window.open('', '_blank', 'width=1160,height=900,scrollbars=yes,resizable=yes');
       if (!printWindow) {
         alert('Please allow pop-ups in your browser to open the A4 PDF Print Studio.');
         return;
@@ -3278,7 +3311,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="${window.location.origin}/css/print-studio.css?v=20261107-11" />
+  <link rel="stylesheet" href="${window.location.origin}/css/print-studio.css?v=20261107-12" />
   <style id="dynamic-page-rule">
     @page { size: A4 portrait; margin: 0 !important; }
   </style>
@@ -3340,6 +3373,35 @@
     .doc-meter.amber .bar {
       background: #d97706 !important;
     }
+    .studio-sec-bar {
+      background: #111827;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      padding: 8px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: #e2e8f0;
+      font-size: 11.5px;
+    }
+    @media print {
+      .studio-sec-bar { display: none !important; }
+    }
+    .studio-chk-lbl {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.14);
+      padding: 4px 10px;
+      border-radius: 5px;
+      user-select: none;
+    }
+    .studio-chk-lbl:hover {
+      border-color: #db0031;
+    }
   </style>
 </head>
 <body>
@@ -3349,7 +3411,7 @@
         KOART <span style="color: #db0031;">STUDIO</span> · Multi-Company Budget &amp; Wanted PDF Publisher
       </span>
       <span style="font-size: 11px; color: #94a3b8; font-family: 'Space Mono', monospace; background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 4px;">
-        Scope: ${snap.scopeTitle}
+        ${snap.scopeTitle} · ${snap.companyScopeLabel} · ${snap.statusScopeLabel}
       </span>
     </div>
     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -3362,6 +3424,45 @@
       </select>
       <button class="btn-print-primary" onclick="window.print()">🖨️ Print / Save as PDF (Ctrl+P)</button>
       <button class="btn-ctrl" onclick="window.close()">✕ Close</button>
+    </div>
+  </div>
+
+  <!-- Live Section Selector Bar Inside PDF Preview Window -->
+  <div class="studio-sec-bar">
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <strong style="font-family: 'Space Mono', monospace; font-size: 10.5px; color: #f87171; text-transform: uppercase;">
+        🎯 Select Sections to Include in Print:
+      </strong>
+      <select class="btn-ctrl" style="background: #1e293b; padding: 4px 10px;" onchange="applyStudioPreset(this.value)">
+        <option value="custom">Quick Preset...</option>
+        <option value="full">📑 Full Report (All Sections)</option>
+        <option value="summary_and_companies">🌐+🏢 Summary + Company-by-Company (No Tasks)</option>
+        <option value="only_companies">🏢 Only Company-by-Company Breakdown</option>
+        <option value="only_all_summary">🌐 Only All-Companies Combined Rollup</option>
+        <option value="only_tasks">📋 Only Scheduled Tasks Ledger</option>
+      </select>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <label class="studio-chk-lbl">
+        <input type="checkbox" id="st-chk-kpis" ${snap.includeKpis ? 'checked' : ''} onchange="syncStudioSections()" style="accent-color:#db0031;" />
+        <span>📊 KPI Strip</span>
+      </label>
+      <label class="studio-chk-lbl">
+        <input type="checkbox" id="st-chk-sec1" ${snap.includeSec1 ? 'checked' : ''} onchange="syncStudioSections()" style="accent-color:#db0031;" />
+        <span>🌐 01. All-Companies Rollup</span>
+      </label>
+      <label class="studio-chk-lbl">
+        <input type="checkbox" id="st-chk-sec2" ${snap.includeSec2 ? 'checked' : ''} onchange="syncStudioSections()" style="accent-color:#db0031;" />
+        <span>🏢 02. Company-by-Company</span>
+      </label>
+      <label class="studio-chk-lbl">
+        <input type="checkbox" id="st-chk-sec3" ${snap.includeSec3 ? 'checked' : ''} onchange="syncStudioSections()" style="accent-color:#db0031;" />
+        <span>📋 03. Tasks Ledger</span>
+      </label>
+      <label class="studio-chk-lbl">
+        <input type="checkbox" id="st-chk-signoff" ${snap.includeSignoff ? 'checked' : ''} onchange="syncStudioSections()" style="accent-color:#db0031;" />
+        <span>✍️ Sign-Off Block</span>
+      </label>
     </div>
   </div>
 
@@ -3395,7 +3496,7 @@
           <div class="cover-meta-item">
             <div class="lbl">WORKSPACE SCOPE</div>
             <div class="val">${snap.companyScopeLabel}</div>
-            <div class="sub">Multi-Company Financial Rollup</div>
+            <div class="sub">${snap.statusScopeLabel}</div>
           </div>
           <div class="cover-meta-item">
             <div class="lbl">ALL-COMPANIES WANTED (OPEN)</div>
@@ -3437,182 +3538,192 @@
             </div>
             <h2 class="doc-header-title">All-Companies &amp; Company-by-Company Wanted / Budget Report</h2>
             <div class="doc-header-desc">
-              Consolidated breakdown of open/wanted job funding, completed realized value, and total planned budget across each company.
+              Filter Scope: <strong>${snap.scopeTitle}</strong> · <strong>${snap.companyScopeLabel}</strong> · <strong>${snap.statusScopeLabel}</strong>
             </div>
           </div>
           <div class="doc-header-meta">
             <div>Month Scope: <strong style="color:#0f172a;">${snap.scopeTitle}</strong></div>
             <div>Workspaces: <strong style="color:#0f172a;">${snap.companyScopeLabel}</strong></div>
+            <div>Task Filter: <strong style="color:#0f172a;">${snap.statusScopeLabel}</strong></div>
             <div>Generated: <span>${genDateStr}</span></div>
-            <div>Authorized: <strong style="color:#0f172a;">${directorName}</strong></div>
           </div>
         </div>
 
         <!-- 4-Card KPI Scorecard Strip -->
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-label">Scheduled Tasks</div>
-            <div class="kpi-value">${snap.grandDoneTasks} / ${snap.grandTotalTasks}</div>
-            <div class="doc-meter"><div class="bar" style="width: ${overallPct}%;"></div></div>
-            <div class="kpi-card-sub">${snap.grandOpenTasks} Open · ${overallPct}% Completed</div>
-          </div>
-          <div class="kpi-card" style="border-top-color: #d97706 !important;">
-            <div class="kpi-label">⏳ Total Wanted (Open)</div>
-            <div class="kpi-value amber">${snap.grandWantedStr}</div>
-            <div class="doc-meter amber"><div class="bar" style="width: ${snap.grandTotalTasks > 0 ? Math.round((snap.grandOpenTasks / snap.grandTotalTasks) * 100) : 0}%;"></div></div>
-            <div class="kpi-card-sub">${snap.grandOpenTasks} open task(s) across companies</div>
-          </div>
-          <div class="kpi-card" style="border-top-color: #059669 !important;">
-            <div class="kpi-label">✅ Total Realized (Done)</div>
-            <div class="kpi-value green">${snap.grandRealizedStr}</div>
-            <div class="doc-meter green"><div class="bar" style="width: ${overallPct}%;"></div></div>
-            <div class="kpi-card-sub">${snap.grandDoneTasks} completed task(s) delivered</div>
-          </div>
-          <div class="kpi-card" style="border-top-color: #2563eb !important;">
-            <div class="kpi-label">📋 Total Planned (All)</div>
-            <div class="kpi-value blue">${snap.grandPlannedStr}</div>
-            <div class="doc-meter blue"><div class="bar" style="width: 100%;"></div></div>
-            <div class="kpi-card-sub">Across ${snap.compList.length} registered workspace(s)</div>
+        <div id="pdf-part-kpis" style="display: ${snap.includeKpis ? 'block' : 'none'};">
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Scheduled Tasks</div>
+              <div class="kpi-value">${snap.grandDoneTasks} / ${snap.grandTotalTasks}</div>
+              <div class="doc-meter"><div class="bar" style="width: ${overallPct}%;"></div></div>
+              <div class="kpi-card-sub">${snap.grandOpenTasks} Open · ${overallPct}% Completed</div>
+            </div>
+            <div class="kpi-card" style="border-top-color: #d97706 !important;">
+              <div class="kpi-label">⏳ Total Wanted (Open)</div>
+              <div class="kpi-value amber">${snap.grandWantedStr}</div>
+              <div class="doc-meter amber"><div class="bar" style="width: ${snap.grandTotalTasks > 0 ? Math.round((snap.grandOpenTasks / snap.grandTotalTasks) * 100) : 0}%;"></div></div>
+              <div class="kpi-card-sub">${snap.grandOpenTasks} open task(s) across companies</div>
+            </div>
+            <div class="kpi-card" style="border-top-color: #059669 !important;">
+              <div class="kpi-label">✅ Total Realized (Done)</div>
+              <div class="kpi-value green">${snap.grandRealizedStr}</div>
+              <div class="doc-meter green"><div class="bar" style="width: ${overallPct}%;"></div></div>
+              <div class="kpi-card-sub">${snap.grandDoneTasks} completed task(s) delivered</div>
+            </div>
+            <div class="kpi-card" style="border-top-color: #2563eb !important;">
+              <div class="kpi-label">📋 Total Planned (All)</div>
+              <div class="kpi-value blue">${snap.grandPlannedStr}</div>
+              <div class="doc-meter blue"><div class="bar" style="width: 100%;"></div></div>
+              <div class="kpi-card-sub">Across ${snap.compList.length} matching workspace(s)</div>
+            </div>
           </div>
         </div>
 
         <!-- SECTION 01: ALL-COMPANIES COMBINED ROLLUP BY CURRENCY -->
-        <div class="doc-section-heading">
-          <span class="badge">01</span> All-Companies Combined Financial Summary (By Currency)
-        </div>
-        <div class="sec-subnote">
-          Total money wanted (open/pending jobs), realized (completed jobs), and total planned budget grouped by currency.
-        </div>
-        <div class="table-responsive">
-          <table class="data-table">
-            <colgroup>
-              <col style="width: 22%;" />
-              <col style="width: 10%;" />
-              <col style="width: 10%;" />
-              <col style="width: 13%;" />
-              <col style="width: 15%;" />
-              <col style="width: 15%;" />
-              <col style="width: 15%;" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Currency Group</th>
-                <th style="text-align: center;">Open</th>
-                <th style="text-align: center;">Done</th>
-                <th style="text-align: center;">Total Tasks</th>
-                <th style="text-align: right;">⏳ Wanted (Open)</th>
-                <th style="text-align: right;">✅ Realized (Done)</th>
-                <th style="text-align: right;">📋 Total Planned</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${currRowsHtml}
-            </tbody>
-          </table>
+        <div id="pdf-part-sec1" style="display: ${snap.includeSec1 ? 'block' : 'none'};">
+          <div class="doc-section-heading">
+            <span class="badge">01</span> All-Companies Combined Financial Summary (By Currency)
+          </div>
+          <div class="sec-subnote">
+            Total money wanted (open/pending jobs), realized (completed jobs), and total planned budget grouped by currency.
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <colgroup>
+                <col style="width: 22%;" />
+                <col style="width: 10%;" />
+                <col style="width: 10%;" />
+                <col style="width: 13%;" />
+                <col style="width: 15%;" />
+                <col style="width: 15%;" />
+                <col style="width: 15%;" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Currency Group</th>
+                  <th style="text-align: center;">Open</th>
+                  <th style="text-align: center;">Done</th>
+                  <th style="text-align: center;">Total Tasks</th>
+                  <th style="text-align: right;">⏳ Wanted (Open)</th>
+                  <th style="text-align: right;">✅ Realized (Done)</th>
+                  <th style="text-align: right;">📋 Total Planned</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${currRowsHtml}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- SECTION 02: COMPANY-BY-COMPANY BREAKDOWN -->
-        <div class="doc-section-heading">
-          <span class="badge">02</span> Company-by-Company Financial &amp; Wanted Breakdown
-        </div>
-        <div class="sec-subnote">
-          Side-by-side comparison of open wanted value, realized value, and total planned budget for each individual company.
-        </div>
-        <div class="table-responsive">
-          <table class="data-table">
-            <colgroup>
-              <col style="width: 23%;" />
-              <col style="width: 7%;" />
-              <col style="width: 8%;" />
-              <col style="width: 8%;" />
-              <col style="width: 12%;" />
-              <col style="width: 14%;" />
-              <col style="width: 14%;" />
-              <col style="width: 14%;" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Company / Workspace</th>
-                <th style="text-align: center;">Curr</th>
-                <th style="text-align: center;">Open</th>
-                <th style="text-align: center;">Done</th>
-                <th style="text-align: center;">Total Tasks</th>
-                <th style="text-align: right;">⏳ Wanted (Open)</th>
-                <th style="text-align: right;">✅ Realized (Done)</th>
-                <th style="text-align: right;">📋 Total Planned</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${compRowsHtml}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td>ALL COMPANIES COMBINED (${snap.compList.length})</td>
-                <td style="text-align: center; font-family: 'Space Mono', monospace;">MULTI</td>
-                <td style="text-align: center; font-family: 'Space Mono', monospace; color: #d97706 !important;">${snap.grandOpenTasks}</td>
-                <td style="text-align: center; font-family: 'Space Mono', monospace; color: #059669 !important;">${snap.grandDoneTasks}</td>
-                <td style="text-align: center; font-family: 'Space Mono', monospace;">${snap.grandTotalTasks} (${overallPct}%)</td>
-                <td style="text-align: right; font-family: 'Space Mono', monospace; color: #d97706 !important;">${snap.grandWantedStr}</td>
-                <td style="text-align: right; font-family: 'Space Mono', monospace; color: #059669 !important;">${snap.grandRealizedStr}</td>
-                <td style="text-align: right; font-family: 'Space Mono', monospace; color: #0f172a !important;">${snap.grandPlannedStr}</td>
-              </tr>
-            </tfoot>
-          </table>
+        <div id="pdf-part-sec2" style="display: ${snap.includeSec2 ? 'block' : 'none'};">
+          <div class="doc-section-heading">
+            <span class="badge">02</span> Company-by-Company Financial &amp; Wanted Breakdown
+          </div>
+          <div class="sec-subnote">
+            Side-by-side comparison of open wanted value, realized value, and total planned budget for each individual company.
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <colgroup>
+                <col style="width: 23%;" />
+                <col style="width: 7%;" />
+                <col style="width: 8%;" />
+                <col style="width: 8%;" />
+                <col style="width: 12%;" />
+                <col style="width: 14%;" />
+                <col style="width: 14%;" />
+                <col style="width: 14%;" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Company / Workspace</th>
+                  <th style="text-align: center;">Curr</th>
+                  <th style="text-align: center;">Open</th>
+                  <th style="text-align: center;">Done</th>
+                  <th style="text-align: center;">Total Tasks</th>
+                  <th style="text-align: right;">⏳ Wanted (Open)</th>
+                  <th style="text-align: right;">✅ Realized (Done)</th>
+                  <th style="text-align: right;">📋 Total Planned</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${compRowsHtml}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td>ALL MATCHING COMPANIES (${snap.compList.length})</td>
+                  <td style="text-align: center; font-family: 'Space Mono', monospace;">${snap.selectedCurr || 'MULTI'}</td>
+                  <td style="text-align: center; font-family: 'Space Mono', monospace; color: #d97706 !important;">${snap.grandOpenTasks}</td>
+                  <td style="text-align: center; font-family: 'Space Mono', monospace; color: #059669 !important;">${snap.grandDoneTasks}</td>
+                  <td style="text-align: center; font-family: 'Space Mono', monospace;">${snap.grandTotalTasks} (${overallPct}%)</td>
+                  <td style="text-align: right; font-family: 'Space Mono', monospace; color: #d97706 !important;">${snap.grandWantedStr}</td>
+                  <td style="text-align: right; font-family: 'Space Mono', monospace; color: #059669 !important;">${snap.grandRealizedStr}</td>
+                  <td style="text-align: right; font-family: 'Space Mono', monospace; color: #0f172a !important;">${snap.grandPlannedStr}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
 
         <!-- SECTION 03: SCHEDULED TASKS DETAILED LEDGER -->
-        <div class="doc-section-heading">
-          <span class="badge">03</span> Scheduled Tasks &amp; Job Cost Ledger (${snap.scopeTitle})
-        </div>
-        <div class="sec-subnote">
-          Individual scheduled tasks contributing to each company's wanted and realized totals in ${snap.scopeTitle}.
-        </div>
-        <div class="table-responsive">
-          <table class="data-table">
-            <colgroup>
-              <col style="width: 16%;" />
-              <col style="width: 11%;" />
-              <col style="width: 23%;" />
-              <col style="width: 17%;" />
-              <col style="width: 12%;" />
-              <col style="width: 10%;" />
-              <col style="width: 11%;" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Job Code</th>
-                <th>Task Title</th>
-                <th>Assigned Staff</th>
-                <th>Due Date</th>
-                <th style="text-align: center;">Status</th>
-                <th style="text-align: right;">Job Cost / Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${taskRowsHtml}
-            </tbody>
-          </table>
+        <div id="pdf-part-sec3" style="display: ${snap.includeSec3 ? 'block' : 'none'};">
+          <div class="doc-section-heading">
+            <span class="badge">03</span> Scheduled Tasks &amp; Job Cost Ledger (${snap.scopeTitle})
+          </div>
+          <div class="sec-subnote">
+            Individual scheduled tasks contributing to each company's wanted and realized totals (${snap.statusScopeLabel}).
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <colgroup>
+                <col style="width: 16%;" />
+                <col style="width: 11%;" />
+                <col style="width: 23%;" />
+                <col style="width: 17%;" />
+                <col style="width: 12%;" />
+                <col style="width: 10%;" />
+                <col style="width: 11%;" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>Company</th>
+                  <th>Job Code</th>
+                  <th>Task Title</th>
+                  <th>Assigned Staff</th>
+                  <th>Due Date</th>
+                  <th style="text-align: center;">Status</th>
+                  <th style="text-align: right;">Job Cost / Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${taskRowsHtml}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       <!-- Bottom Official Sign-off Block & Running Footer -->
       <div class="doc-bottom-flow">
-        <div class="exec-signoff-block">
-          <div class="signoff-box">
-            <div class="signoff-role">Prepared By</div>
-            <div class="signoff-name">KOart Operations Platform</div>
-            <div class="signoff-line"><span>Automated Financial Audit</span><span class="signoff-badge">Verified ✓</span></div>
-          </div>
-          <div class="signoff-box">
-            <div class="signoff-role">Reviewed &amp; Authorized By</div>
-            <div class="signoff-name">${directorName}</div>
-            <div class="signoff-line"><span>Executive Sign-off</span><span class="signoff-badge verified">Approved ✓</span></div>
-          </div>
-          <div class="signoff-box signoff-stamp-box">
-            <div class="signoff-role">Organization</div>
-            <div class="signoff-name" style="color: #db0031 !important;">KOART SOLUTIONS</div>
-            <div class="signoff-line"><span>Official Budget Record</span><span class="signoff-badge verified">Authenticated</span></div>
+        <div id="pdf-part-signoff" style="display: ${snap.includeSignoff ? 'block' : 'none'};">
+          <div class="exec-signoff-block">
+            <div class="signoff-box">
+              <div class="signoff-role">Prepared By</div>
+              <div class="signoff-name">KOart Operations Platform</div>
+              <div class="signoff-line"><span>Automated Financial Audit</span><span class="signoff-badge">Verified ✓</span></div>
+            </div>
+            <div class="signoff-box">
+              <div class="signoff-role">Reviewed &amp; Authorized By</div>
+              <div class="signoff-name">${directorName}</div>
+              <div class="signoff-line"><span>Executive Sign-off</span><span class="signoff-badge verified">Approved ✓</span></div>
+            </div>
+            <div class="signoff-box signoff-stamp-box">
+              <div class="signoff-role">Organization</div>
+              <div class="signoff-name" style="color: #db0031 !important;">KOART SOLUTIONS</div>
+              <div class="signoff-line"><span>Official Budget Record</span><span class="signoff-badge verified">Authenticated</span></div>
+            </div>
           </div>
         </div>
         <div class="doc-running-footer">
@@ -3647,6 +3758,40 @@
         coverEl.classList.remove('theme-dark', 'theme-white');
         coverEl.classList.add(style === 'dark' ? 'theme-dark' : 'theme-white');
       }
+    }
+    function syncStudioSections() {
+      const map = [
+        ['st-chk-kpis', 'pdf-part-kpis'],
+        ['st-chk-sec1', 'pdf-part-sec1'],
+        ['st-chk-sec2', 'pdf-part-sec2'],
+        ['st-chk-sec3', 'pdf-part-sec3'],
+        ['st-chk-signoff', 'pdf-part-signoff']
+      ];
+      map.forEach(([chkId, partId]) => {
+        const chk = document.getElementById(chkId);
+        const part = document.getElementById(partId);
+        if (chk && part) {
+          part.style.display = chk.checked ? 'block' : 'none';
+        }
+      });
+    }
+    function applyStudioPreset(val) {
+      const setC = (id, b) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = b;
+      };
+      if (val === 'full') {
+        setC('st-chk-kpis', true); setC('st-chk-sec1', true); setC('st-chk-sec2', true); setC('st-chk-sec3', true); setC('st-chk-signoff', true);
+      } else if (val === 'summary_and_companies') {
+        setC('st-chk-kpis', true); setC('st-chk-sec1', true); setC('st-chk-sec2', true); setC('st-chk-sec3', false); setC('st-chk-signoff', true);
+      } else if (val === 'only_companies') {
+        setC('st-chk-kpis', false); setC('st-chk-sec1', false); setC('st-chk-sec2', true); setC('st-chk-sec3', false); setC('st-chk-signoff', true);
+      } else if (val === 'only_all_summary') {
+        setC('st-chk-kpis', true); setC('st-chk-sec1', true); setC('st-chk-sec2', false); setC('st-chk-sec3', false); setC('st-chk-signoff', true);
+      } else if (val === 'only_tasks') {
+        setC('st-chk-kpis', false); setC('st-chk-sec1', false); setC('st-chk-sec2', false); setC('st-chk-sec3', true); setC('st-chk-signoff', true);
+      }
+      syncStudioSections();
     }
   </script>
 </body>
