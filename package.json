@@ -1,0 +1,26 @@
+{
+  "name": "koart-operational-platform",
+  "version": "1.0.0",
+  "description": "Multi-Tenant Operational & Task Management SaaS Platform for KOart Solutions",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "koart",
+    "saas",
+    "task-management",
+    "multi-tenant",
+    "whatsapp-dispatch",
+    "operational-suite"
+  ],
+  "author": "KOart Solutions — Digital Engineering Practice",
+  "license": "UNLICENSED",
+  "private": true
+}
+

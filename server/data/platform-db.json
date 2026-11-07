@@ -1,0 +1,201 @@
+{
+  "users": [
+    {
+      "id": "usr_owner_koart_01",
+      "full_name": "Director / Executive Handler",
+      "email": "director@koart.lk",
+      "password_hash": "admin123",
+      "account_type": "individual",
+      "max_companies": 999,
+      "is_active": true,
+      "created_at": "2026-11-07T08:00:00.000Z"
+    },
+    {
+      "id": "usr_1794023579341",
+      "full_name": "Adeesha Kannangara",
+      "email": "kannangaraadeesha@gmail.com",
+      "password_hash": "#Ravi12@",
+      "account_type": "individual",
+      "max_companies": 999,
+      "is_active": true,
+      "created_at": "2026-11-07T03:52:59.344Z"
+    }
+  ],
+  "companies": [
+    {
+      "id": "comp_workspace_01",
+      "owner_id": "usr_owner_koart_01",
+      "name": "Primary Workspace",
+      "category": "Operations & Management",
+      "currency_code": "LKR",
+      "contact_phone": "",
+      "onboarding_completed": true,
+      "created_at": "2026-11-07T08:00:00.000Z"
+    },
+    {
+      "id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "owner_id": "usr_1794023579341",
+      "name": "Apex",
+      "category": "Digital Solution",
+      "currency_code": "LKR",
+      "contact_phone": "+94724207000",
+      "onboarding_completed": true,
+      "created_at": "2026-11-07T03:53:32.588Z"
+    },
+    {
+      "id": "71e101ed-0464-4a0d-ab16-3de6d05eef1c",
+      "owner_id": "usr_1794023579341",
+      "name": "Apex",
+      "category": "DIgital Solution",
+      "currency_code": "USD",
+      "contact_phone": "+94773587393",
+      "onboarding_completed": true,
+      "created_at": "2026-11-07T05:07:37.933Z"
+    }
+  ],
+  "employees": [
+    {
+      "id": "831f32b8-a85c-46cb-8c94-f63ab645ebcc",
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "employee_code": "EMP-01",
+      "full_name": "Adeesha Ravimal Ravimal",
+      "role_title": "Sys handler",
+      "whatsapp_number": "+94724207000",
+      "is_active": true,
+      "created_at": "2026-11-07T03:53:32.590Z"
+    },
+    {
+      "id": "86658af7-9174-4874-939a-e6970a259f95",
+      "company_id": "71e101ed-0464-4a0d-ab16-3de6d05eef1c",
+      "employee_code": "EMP-01",
+      "full_name": "Thejana Kannangara",
+      "role_title": "Sys handler",
+      "whatsapp_number": "+94773587393",
+      "is_active": true,
+      "created_at": "2026-11-07T05:07:37.936Z"
+    },
+    {
+      "id": "9d42f06c-f2ce-4cac-8b22-22830eb9626c",
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "employee_code": "EMP-02",
+      "full_name": "Sumal",
+      "role_title": "desigener",
+      "whatsapp_number": "1299394443",
+      "is_active": true,
+      "created_at": "2026-11-07T06:38:38.140Z"
+    }
+  ],
+  "jobs": [
+    {
+      "id": "df39774d-2abe-4908-ac71-943efa957d68",
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "employee_id": "831f32b8-a85c-46cb-8c94-f63ab645ebcc",
+      "job_code": "JOB-1001",
+      "title": "TEST",
+      "description": "One work ",
+      "priority": "urgent",
+      "status": "completed",
+      "stated_value": 45000,
+      "realized_value": 45000,
+      "include_value_on_wa": true,
+      "start_date": "2026-11-07T03:54:28.420Z",
+      "original_due_date": "2026-11-07T12:00:00.000Z",
+      "current_due_date": "2026-11-07T12:00:00.000Z",
+      "completed_at": "2026-11-07T04:56:37.658Z",
+      "stopped_at": null,
+      "stop_category": null,
+      "stop_reason": null,
+      "extension_count": 0,
+      "staff_extension_count": 0,
+      "client_extension_count": 0,
+      "followup_count": 1,
+      "created_at": "2026-11-07T03:54:28.420Z"
+    }
+  ],
+  "job_audit_logs": [
+    {
+      "id": "dec34582-ef76-47b6-b40b-613a5b77f0e9",
+      "job_id": "df39774d-2abe-4908-ac71-943efa957d68",
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "action_type": "created",
+      "delay_fault": "none",
+      "previous_due_date": null,
+      "new_due_date": "2026-11-07T12:00:00.000Z",
+      "wa_payload": "Job #JOB-1001 assigned.",
+      "handler_note": "Job created and assigned in platform.",
+      "created_at": "2026-11-07T03:54:28.422Z"
+    },
+    {
+      "id": "a4fd84aa-697c-4441-8e0e-89d5ccb94dfd",
+      "job_id": "df39774d-2abe-4908-ac71-943efa957d68",
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "action_type": "status_change",
+      "delay_fault": "none",
+      "previous_due_date": null,
+      "new_due_date": null,
+      "wa_payload": "Status updated: in_progress",
+      "handler_note": "Test verification",
+      "created_at": "2026-11-07T04:53:19.323Z"
+    },
+    {
+      "id": "bb9dfec6-1f34-4fbe-ad07-cee732e9af22",
+      "job_id": "df39774d-2abe-4908-ac71-943efa957d68",
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "action_type": "status_change",
+      "delay_fault": "none",
+      "previous_due_date": null,
+      "new_due_date": null,
+      "wa_payload": "Status updated: pending",
+      "handler_note": "Status changed from in_progress to pending.",
+      "created_at": "2026-11-07T04:56:35.806Z"
+    },
+    {
+      "id": "9bfa22bf-59fc-4cd7-b218-43e88129d586",
+      "job_id": "df39774d-2abe-4908-ac71-943efa957d68",
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "action_type": "status_change",
+      "delay_fault": "none",
+      "previous_due_date": null,
+      "new_due_date": null,
+      "wa_payload": "Status updated: completed",
+      "handler_note": "Status changed from pending to completed.",
+      "created_at": "2026-11-07T04:56:37.658Z"
+    },
+    {
+      "id": "d802eaaa-dd3f-448b-a23a-d5e4c408ad3f",
+      "job_id": null,
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "action_type": "agenda_dispatch",
+      "delay_fault": "none",
+      "previous_due_date": null,
+      "new_due_date": null,
+      "wa_payload": "📋 *APEX · DAILY OPERATIONS BRIEFING*\n📅 *Date:* Sat, Nov 7, 2026\n\nGood Morning *Adeesha Ravimal Ravimal*,\nHere is your active operational agenda for today:\n\n✓ *No outstanding tasks assigned for today!*\nAll commitments are currently clear. Stand by for new dispatches.\n",
+      "handler_note": "Daily morning briefing dispatched to Adeesha Ravimal Ravimal (0 tasks).",
+      "created_at": "2026-11-07T07:43:35.668Z"
+    },
+    {
+      "id": "dbf69d12-9f08-43e0-8e86-9a6fdf1f1027",
+      "job_id": "df39774d-2abe-4908-ac71-943efa957d68",
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "action_type": "status_change",
+      "delay_fault": "none",
+      "previous_due_date": null,
+      "new_due_date": null,
+      "wa_payload": "Status updated: completed",
+      "handler_note": "Status changed from completed to completed.",
+      "created_at": "2026-11-07T07:49:09.359Z"
+    },
+    {
+      "id": "f1683cec-808c-4aec-8c11-93a732214bc4",
+      "job_id": "df39774d-2abe-4908-ac71-943efa957d68",
+      "company_id": "ec3255fe-9b1d-4eec-aa61-ed421eb4c299",
+      "action_type": "wa_followup",
+      "delay_fault": "staff",
+      "previous_due_date": null,
+      "new_due_date": null,
+      "wa_payload": "Follow-up #1 dispatched.",
+      "handler_note": "Kindly update management on completion progress.",
+      "created_at": "2026-11-07T07:49:14.201Z"
+    }
+  ]
+}
