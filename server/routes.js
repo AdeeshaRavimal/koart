@@ -7,6 +7,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
+try {
+  delete require.cache[require.resolve('./analytics')];
+} catch (e) {}
 const { calculateEmployeeScore, generateReports, generateCsvReport } = require('./analytics');
 const {
   buildWhatsAppJobCard,

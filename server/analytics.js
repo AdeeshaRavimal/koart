@@ -352,11 +352,10 @@ function generateReports(rawDb, companyId, options = {}) {
     let compJobs = db.jobs.filter(j => j.company_id === comp.id);
 
     // Apply date range filter if specified
-    if (startMs !== null || endMs !== null) {
+    if (startMs > 0 || endMs !== Infinity) {
       compJobs = compJobs.filter(j => {
-        const refMs = new Date(j.created_at || j.current_due_date).getTime();
-        if (startMs !== null && refMs < startMs) return false;
-        if (endMs !== null && refMs > endMs) return false;
+        const refMs = new Date(j.created_at || j.start_date || j.current_due_date).getTime();
+        if (refMs < startMs || refMs > endMs) return false;
         return true;
       });
     }

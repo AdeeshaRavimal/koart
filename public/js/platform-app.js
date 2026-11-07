@@ -15,6 +15,17 @@
       selectedJobForOverdue: null
     };
 
+    const reportState = {
+      activeTab: 1,
+      preset: 'all',
+      startDate: '',
+      endDate: '',
+      employeeId: '',
+      orientation: 'portrait',
+      coverStyle: 'none',
+      cachedData: null
+    };
+
     // Helper: Format Currency
     function formatLKR(val, currency = 'LKR') {
       return `${currency} ${Number(val || 0).toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -353,6 +364,14 @@
         await loadDashboardKPIs();
         loadJobsTable(true);
         loadStaffTable();
+        const calTab = document.getElementById('view-calendar');
+        if (calTab && calTab.classList.contains('active')) {
+          loadCalendarView();
+        }
+        const repTab = document.getElementById('view-reports');
+        if (repTab && repTab.classList.contains('active')) {
+          loadReportsView();
+        }
       } else {
         state.employees = [];
         state.staff = [];
@@ -1233,17 +1252,6 @@
     // ------------------------------------------------------------------------
     // EXECUTIVE REPORTS & MANAGEMENT INTELLIGENCE SUITE
     // ------------------------------------------------------------------------
-    const reportState = {
-      activeTab: 1,
-      preset: 'all',
-      startDate: '',
-      endDate: '',
-      employeeId: '',
-      orientation: 'portrait',
-      coverStyle: 'none',
-      cachedData: null
-    };
-
     function setReportDatePreset(preset) {
       reportState.preset = preset;
       const now = new Date();
