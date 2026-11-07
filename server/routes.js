@@ -851,6 +851,90 @@ async function handleApiRequest(req, res, url, body) {
   }
 
   // --------------------------------------------------------------------------
+  // EMPLOYEE PREVIOUS & RECURRENT TASKS ENDPOINT
+  // --------------------------------------------------------------------------
+  const matchPreviousTasks = pathname.match(/^\/api\/employees\/([^/]+)\/previous-tasks\/?$/);
+  if (method === 'GET' && matchPreviousTasks) {
+    const employeeId = matchPreviousTasks[1];
+    const employee = db.data.employees.find(e => e.id === employeeId);
+    if (!employee) return errorResponse(res, 404, 'Employee not found');
+
+    const company = db.data.companies.find(c => c.id === employee.company_id) || { name: 'KOart Platform', currency_code: 'LKR' };
+
+    // Get all jobs assigned to this employee across this company
+    const employeeJobs = (db.data.jobs || []).filter(j => j.employee_id === employee.id && j.company_id === employee.company_id);
+
+    // Group and deduplicate by trimmed lowercase title to identify recurrent task patterns
+    const map = new Map();
+    // Sort chronological descending (most recent first)
+    const sorted = [...employeeJobs].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    sorted.forEach(j => {
+      const key = (j.title || '').trim().toLowerCase();
+      if (!key) return;
+      if (!map.has(key)) {
+        map.set(key, {
+          title: j.title.trim(),
+          description: j.description || '',
+          priority: j.priority || 'medium',
+          statedValue: Number(j.stated_value || 0),
+          includeValueOnWa: j.include_value_on_wa !== false,
+          frequency: 1,
+          lastAssigned: j.created_at,
+          lastStatus: j.status,
+          currency: company.currency_code
+        });
+      } else {
+        const item = map.get(key);
+        item.frequency += 1;
+      }
+    });
+
+    const recurrentTemplates = Array.from(map.values()).sort((a, b) => b.frequency - a.frequency || new Date(b.lastAssigned) - new Date(a.lastAssigned));
+
+    // Role-based smart fallback templates if employee has few or 0 tasks
+    const roleLower = (employee.role_title || '').toLowerCase();
+    const roleTemplates = [];
+    if (roleLower.includes('desig') || roleLower.includes('graphic') || roleLower.includes('art') || roleLower.includes('ui') || roleLower.includes('ux')) {
+      roleTemplates.push(
+        { title: 'Social Media Graphics & Campaign Banner Batch', description: 'Design 6 high-resolution creative banners for weekly brand campaigns.', priority: 'high', statedValue: 25000 },
+        { title: 'Brand Identity & Logo Concept Revisions', description: 'Review typography, vector assets, and export client presentation deck.', priority: 'medium', statedValue: 35000 },
+        { title: 'Packaging & Print Collateral Review', description: 'Verify bleed margins, color swatches (CMYK), and final print-ready PDF export.', priority: 'urgent', statedValue: 40000 }
+      );
+    } else if (roleLower.includes('dev') || roleLower.includes('code') || roleLower.includes('web') || roleLower.includes('tech') || roleLower.includes('sys')) {
+      roleTemplates.push(
+        { title: 'Website Maintenance & Security Patch Review', description: 'Perform plugin/package audit, database backup verification, and SSL status check.', priority: 'medium', statedValue: 30000 },
+        { title: 'Frontend UI Responsiveness & Bug Fixes', description: 'Resolve mobile viewport padding, form validation edge cases, and cross-browser checks.', priority: 'high', statedValue: 45000 },
+        { title: 'API Integration & Performance Optimization', description: 'Test latency, refactor endpoint payloads, and document response schemas.', priority: 'urgent', statedValue: 55000 }
+      );
+    } else if (roleLower.includes('video') || roleLower.includes('animat') || roleLower.includes('motion')) {
+      roleTemplates.push(
+        { title: 'Reels / TikTok Short-Form Video Edit', description: 'Cut footage, apply audio sync, motion graphics subtitles, and color grade.', priority: 'high', statedValue: 20000 },
+        { title: 'Corporate Video Montage & Audio Mastering', description: 'Assemble B-roll sequences, clean voiceover audio, and render 4K deliverables.', priority: 'urgent', statedValue: 50000 }
+      );
+    } else {
+      roleTemplates.push(
+        { title: 'Weekly Milestone Deliverables Packaging', description: 'Review completed task items, compile client assets, and prepare audit summary.', priority: 'high', statedValue: 30000 },
+        { title: 'Operational Quality Assurance & Verification', description: 'Perform rigorous checklist verification and generate dispatch sign-off notes.', priority: 'medium', statedValue: 25000 }
+      );
+    }
+
+    return jsonResponse(res, 200, {
+      success: true,
+      employee: {
+        id: employee.id,
+        fullName: employee.full_name,
+        roleTitle: employee.role_title,
+        employeeCode: employee.employee_code
+      },
+      currency: company.currency_code,
+      totalPreviousJobs: employeeJobs.length,
+      recurrentTasks: recurrentTemplates,
+      roleTemplates
+    });
+  }
+
+  // --------------------------------------------------------------------------
   // EXECUTIVE ANALYTICS & REPORTS SUITE
   // --------------------------------------------------------------------------
   if (method === 'GET' && (pathname === '/api/analytics/reports' || pathname === '/api/analytics/export-csv')) {

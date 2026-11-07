@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
@@ -7,10 +8,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>KOart Solutions — Multi-Tenant Operational &amp; Task Management Platform</title>
-  
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap"
+    rel="stylesheet" />
 
   <style>
     :root {
@@ -369,8 +372,15 @@
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* KPI METRICS ROW */
@@ -568,18 +578,66 @@
     }
 
     /* Dark Mode Chips */
-    body.theme-dark .chip-green { background: rgba(16, 185, 129, 0.16); color: #34d399; border-color: rgba(16, 185, 129, 0.35); }
-    body.theme-dark .chip-blue  { background: rgba(59, 130, 246, 0.16); color: #60a5fa; border-color: rgba(59, 130, 246, 0.35); }
-    body.theme-dark .chip-amber { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35); }
-    body.theme-dark .chip-red   { background: rgba(225, 29, 72, 0.16); color: #fb7185; border-color: rgba(225, 29, 72, 0.35); }
-    body.theme-dark .chip-muted { background: rgba(148, 163, 184, 0.12); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.22); }
+    body.theme-dark .chip-green {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+
+    body.theme-dark .chip-blue {
+      background: rgba(59, 130, 246, 0.16);
+      color: #60a5fa;
+      border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    body.theme-dark .chip-amber {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    body.theme-dark .chip-red {
+      background: rgba(225, 29, 72, 0.16);
+      color: #fb7185;
+      border-color: rgba(225, 29, 72, 0.35);
+    }
+
+    body.theme-dark .chip-muted {
+      background: rgba(148, 163, 184, 0.12);
+      color: #cbd5e1;
+      border-color: rgba(148, 163, 184, 0.22);
+    }
 
     /* Light Mode Chips */
-    body.theme-light .chip-green { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
-    body.theme-light .chip-blue  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-    body.theme-light .chip-amber { background: #fffbeb; color: #b45309; border-color: #fde68a; }
-    body.theme-light .chip-red   { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
-    body.theme-light .chip-muted { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+    body.theme-light .chip-green {
+      background: #ecfdf5;
+      color: #047857;
+      border-color: #a7f3d0;
+    }
+
+    body.theme-light .chip-blue {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-color: #bfdbfe;
+    }
+
+    body.theme-light .chip-amber {
+      background: #fffbeb;
+      color: #b45309;
+      border-color: #fde68a;
+    }
+
+    body.theme-light .chip-red {
+      background: #fff1f2;
+      color: #be123c;
+      border-color: #fecdd3;
+    }
+
+    body.theme-light .chip-muted {
+      background: #f1f5f9;
+      color: #475569;
+      border-color: #cbd5e1;
+    }
 
     /* STATUS INTERACTIVE SELECTOR */
     .status-select-wrap {
@@ -760,6 +818,84 @@
       border-color: #8b5cf6 !important;
       color: #ffffff !important;
       background: #8b5cf6 !important;
+    }
+
+    /* RECURRENT & PREVIOUS TASK ASSISTANT DRAWER */
+    .recurrent-panel {
+      background: rgba(219, 0, 49, 0.04);
+      border: 1px solid rgba(219, 0, 49, 0.22);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-bottom: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .recurrent-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .recurrent-panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--red);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.02em;
+    }
+
+    .recurrent-task-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-surface);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .recurrent-task-chip:hover {
+      background: rgba(219, 0, 49, 0.14);
+      border-color: var(--red);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .recurrent-task-chip .chip-freq {
+      background: rgba(219, 0, 49, 0.22);
+      color: var(--red-bright);
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    .recurrent-task-chip .chip-val {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .recurrent-badge-autofill {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 4px;
+      font-size: 11px;
+      color: #34d399;
+      font-weight: 600;
     }
 
     /* OPERATIONAL TIMELINE & JOURNEY DRAWER */
@@ -1077,7 +1213,7 @@
       border: 1.5px solid #202c33;
       overflow: hidden;
       margin: 1rem 0;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
     }
 
     .wa-preview-bar {
@@ -1341,8 +1477,15 @@
     }
 
     @keyframes fadeInAuth {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* DUAL TIER SELECTION CARDS */
@@ -1934,9 +2077,17 @@
       margin-top: 4px;
     }
 
-    .doc-page-sheet .kpi-value.green { color: #059669; }
-    .doc-page-sheet .kpi-value.blue { color: #2563eb; }
-    .doc-page-sheet .kpi-value.red { color: #db0031; }
+    .doc-page-sheet .kpi-value.green {
+      color: #059669;
+    }
+
+    .doc-page-sheet .kpi-value.blue {
+      color: #2563eb;
+    }
+
+    .doc-page-sheet .kpi-value.red {
+      color: #db0031;
+    }
 
     .doc-page-sheet .doc-meter {
       background: #e2e8f0;
@@ -1952,8 +2103,13 @@
       border-radius: 999px;
     }
 
-    .doc-page-sheet .doc-meter.green .bar { background: #059669; }
-    .doc-page-sheet .doc-meter.blue .bar { background: #2563eb; }
+    .doc-page-sheet .doc-meter.green .bar {
+      background: #059669;
+    }
+
+    .doc-page-sheet .doc-meter.blue .bar {
+      background: #2563eb;
+    }
 
     .doc-page-sheet .data-table thead th {
       background: #f1f5f9;
@@ -2032,6 +2188,7 @@
       color: #334155;
       white-space: nowrap;
     }
+
     .doc-page-sheet .signoff-badge.verified {
       background: #dcfce7;
       color: #15803d;
@@ -2099,8 +2256,13 @@
        ========================================================================= */
 
     /* Universal Responsive Utilities */
-    .tab-label-short { display: none; }
-    .btn-job-short { display: none; }
+    .tab-label-short {
+      display: none;
+    }
+
+    .btn-job-short {
+      display: none;
+    }
 
     /* TABLET & SMALL LAPTOPS (<= 1024px) */
     @media screen and (max-width: 1024px) {
@@ -2170,14 +2332,27 @@
 
     /* STANDARD SMARTPHONES & PHABLETS (<= 768px) */
     @media screen and (max-width: 768px) {
-      html, body {
+
+      html,
+      body {
         overflow-x: hidden;
       }
 
-      .tab-label-full { display: none; }
-      .tab-label-short { display: inline; }
-      .btn-job-full { display: none; }
-      .btn-job-short { display: inline; }
+      .tab-label-full {
+        display: none;
+      }
+
+      .tab-label-short {
+        display: inline;
+      }
+
+      .btn-job-full {
+        display: none;
+      }
+
+      .btn-job-short {
+        display: inline;
+      }
 
       .nav-brand-wrap {
         gap: 8px !important;
@@ -2280,7 +2455,7 @@
       }
 
       /* Jobs Board Filter Bar */
-      #view-jobs .panel-header > div:last-child {
+      #view-jobs .panel-header>div:last-child {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
         gap: 6px;
@@ -2332,14 +2507,14 @@
         gap: 10px;
       }
 
-      .calendar-controls > div:first-child {
+      .calendar-controls>div:first-child {
         display: flex;
         justify-content: space-between;
         align-items: center;
         width: 100%;
       }
 
-      .calendar-controls > div:last-child {
+      .calendar-controls>div:last-child {
         display: grid !important;
         grid-template-columns: 1fr auto;
         gap: 6px;
@@ -2386,29 +2561,29 @@
       }
 
       /* Executive Reports View */
-      .report-console-card .panel-header > div:last-child {
+      .report-console-card .panel-header>div:last-child {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
         gap: 6px;
         width: 100%;
       }
 
-      .report-console-card .panel-header > div:last-child > div {
+      .report-console-card .panel-header>div:last-child>div {
         width: 100%;
       }
 
-      .report-console-card .panel-header > div:last-child select {
+      .report-console-card .panel-header>div:last-child select {
         width: 100% !important;
       }
 
-      .report-console-card .panel-header > div:last-child button:nth-of-type(1) {
+      .report-console-card .panel-header>div:last-child button:nth-of-type(1) {
         grid-column: 1 / -1;
         width: 100% !important;
         justify-content: center;
         height: 38px;
       }
 
-      .report-console-card .panel-header > div:last-child button:nth-of-type(2) {
+      .report-console-card .panel-header>div:last-child button:nth-of-type(2) {
         grid-column: 1 / -1;
         width: 100% !important;
         justify-content: center;
@@ -2416,7 +2591,7 @@
         font-size: 12.5px;
       }
 
-      .report-console-card .panel-header > div:last-child button:nth-of-type(3) {
+      .report-console-card .panel-header>div:last-child button:nth-of-type(3) {
         grid-column: 1 / -1;
         width: 100% !important;
         justify-content: center;
@@ -2437,7 +2612,7 @@
         padding: 10px;
       }
 
-      .report-filter-bar > div:first-child {
+      .report-filter-bar>div:first-child {
         width: 100%;
         overflow-x: auto;
         flex-wrap: nowrap !important;
@@ -2446,36 +2621,36 @@
         padding-bottom: 4px;
       }
 
-      .report-filter-bar > div:first-child::-webkit-scrollbar {
+      .report-filter-bar>div:first-child::-webkit-scrollbar {
         display: none;
       }
 
-      .report-filter-bar > div:last-child {
+      .report-filter-bar>div:last-child {
         display: grid !important;
         grid-template-columns: 1fr 1fr;
         gap: 6px;
         width: 100%;
       }
 
-      .report-filter-bar > div:last-child > div:nth-child(1),
-      .report-filter-bar > div:last-child > div:nth-child(2) {
+      .report-filter-bar>div:last-child>div:nth-child(1),
+      .report-filter-bar>div:last-child>div:nth-child(2) {
         width: 100%;
       }
 
-      .report-filter-bar > div:last-child input[type="date"] {
+      .report-filter-bar>div:last-child input[type="date"] {
         width: 100% !important;
       }
 
-      .report-filter-bar > div:last-child > div:nth-child(3) {
+      .report-filter-bar>div:last-child>div:nth-child(3) {
         grid-column: 1 / -1;
         width: 100%;
       }
 
-      .report-filter-bar > div:last-child #report-filter-staff {
+      .report-filter-bar>div:last-child #report-filter-staff {
         width: 100% !important;
       }
 
-      .report-filter-bar > div:last-child button {
+      .report-filter-bar>div:last-child button {
         height: 34px;
       }
 
@@ -2550,8 +2725,13 @@
       }
 
       @keyframes slideUpBottom {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
+        from {
+          transform: translateY(100%);
+        }
+
+        to {
+          transform: translateY(0);
+        }
       }
 
       .form-row {
@@ -2569,12 +2749,12 @@
         gap: 8px !important;
       }
 
-      .modal-box form > div:last-child {
+      .modal-box form>div:last-child {
         flex-direction: column-reverse;
         gap: 8px;
       }
 
-      .modal-box form > div:last-child button {
+      .modal-box form>div:last-child button {
         width: 100% !important;
         justify-content: center;
         height: 40px;
@@ -2655,7 +2835,8 @@
     @media print {
       @page {
         size: A4 portrait;
-        margin: 0; /* Zero margin suppresses the browser's default file path URL, date/time, and title stamps! */
+        margin: 0;
+        /* Zero margin suppresses the browser's default file path URL, date/time, and title stamps! */
       }
 
       * {
@@ -2665,7 +2846,8 @@
         box-sizing: border-box !important;
       }
 
-      html, body {
+      html,
+      body {
         background: #ffffff !important;
         color: #0f172a !important;
         font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
@@ -2682,7 +2864,7 @@
       .nav-tabs-wrapper,
       .report-console-card,
       .report-filter-bar,
-      #view-reports > .kpi-grid,
+      #view-reports>.kpi-grid,
       .cover-preview-bar,
       .web-only,
       .panel-header button,
@@ -3086,7 +3268,10 @@
         margin-top: 2pt !important;
       }
 
-      tr, .avoid-split, .kpi-card, .exec-signoff-block {
+      tr,
+      .avoid-split,
+      .kpi-card,
+      .exec-signoff-block {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
       }
@@ -3115,14 +3300,16 @@
             <span class="company-badge-tier" id="active-tier-badge">Tier</span>
             <span style="font-size: 9px; opacity: 0.6;">▼</span>
           </button>
-          
+
           <div class="company-dropdown-menu" id="company-dropdown-menu">
-            <div style="font-family: var(--font-mono); font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; padding: 4px 8px 6px;">
+            <div
+              style="font-family: var(--font-mono); font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; padding: 4px 8px 6px;">
               Select Active Workspace
             </div>
             <div id="company-list-items"></div>
             <div style="border-top: 1px solid var(--border-color); margin-top: 6px; padding-top: 6px;">
-              <button class="btn-sm" style="width: 100%; justify-content: center; border-radius: var(--radius-sm);" onclick="openOnboardModal()">
+              <button class="btn-sm" style="width: 100%; justify-content: center; border-radius: var(--radius-sm);"
+                onclick="openOnboardModal()">
                 + Register New Workspace
               </button>
             </div>
@@ -3133,10 +3320,12 @@
       <!-- Center: Main Navigation Tabs -->
       <nav class="nav-tabs-pill">
         <button class="nav-tab-btn active" id="tab-btn-dashboard" onclick="switchTab('dashboard')">
-          <span>📊</span> <span class="tab-label-full">Executive Dashboard</span><span class="tab-label-short">Dashboard</span>
+          <span>📊</span> <span class="tab-label-full">Executive Dashboard</span><span
+            class="tab-label-short">Dashboard</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-calendar" onclick="switchTab('calendar')">
-          <span>📅</span> <span class="tab-label-full">Visual Calendar</span><span class="tab-label-short">Calendar</span>
+          <span>📅</span> <span class="tab-label-full">Visual Calendar</span><span
+            class="tab-label-short">Calendar</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-jobs" onclick="switchTab('jobs')">
           <span>📋</span> <span class="tab-label-full">Operational Jobs</span><span class="tab-label-short">Jobs</span>
@@ -3145,13 +3334,15 @@
           <span>👥</span> <span class="tab-label-full">Staff Directory</span><span class="tab-label-short">Staff</span>
         </button>
         <button class="nav-tab-btn" id="tab-btn-reports" onclick="switchTab('reports')">
-          <span>📈</span> <span class="tab-label-full">Reports &amp; Leaderboard</span><span class="tab-label-short">Reports</span>
+          <span>📈</span> <span class="tab-label-full">Reports &amp; Leaderboard</span><span
+            class="tab-label-short">Reports</span>
         </button>
       </nav>
 
       <!-- Right: Action CTA, Theme & User Profile Menu -->
       <div class="nav-actions-right">
-        <button class="btn-theme-toggle" onclick="toggleTheme()" id="btn-theme-toggle" title="Switch Theme (Dark / Light)">
+        <button class="btn-theme-toggle" onclick="toggleTheme()" id="btn-theme-toggle"
+          title="Switch Theme (Dark / Light)">
           <span id="theme-toggle-icon">🌙</span>
           <span id="theme-toggle-text">Dark</span>
         </button>
@@ -3161,7 +3352,8 @@
 
         <!-- User Profile & Account Portal Trigger -->
         <div class="user-profile-wrap">
-          <button class="btn-user-profile" onclick="toggleUserMenu()" id="btn-user-profile" title="Account & Profile Settings">
+          <button class="btn-user-profile" onclick="toggleUserMenu()" id="btn-user-profile"
+            title="Account & Profile Settings">
             <span class="user-avatar-badge" id="nav-user-avatar">👤</span>
             <div class="user-profile-info-nav">
               <span class="nav-user-name" id="nav-user-name">Executive Director</span>
@@ -3187,16 +3379,20 @@
 
               <!-- 1-Click Disaster Recovery & Backup -->
               <div style="border-top: 1px solid var(--border-color); margin: 6px 0 4px; padding-top: 6px;">
-                <div style="font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); text-transform: uppercase; padding: 2px 8px 4px;">
+                <div
+                  style="font-family: var(--font-mono); font-size: 9px; color: var(--text-dim); text-transform: uppercase; padding: 2px 8px 4px;">
                   System Data &amp; Recovery
                 </div>
-                <button class="user-dropdown-item" onclick="downloadDatabaseBackup()" title="Download complete JSON snapshot of all companies, staff, and tasks">
+                <button class="user-dropdown-item" onclick="downloadDatabaseBackup()"
+                  title="Download complete JSON snapshot of all companies, staff, and tasks">
                   <span>📥</span> Download Full DB Backup (.json)
                 </button>
-                <button class="user-dropdown-item" onclick="triggerRestoreBackupPicker()" title="Restore platform data from a JSON backup file">
+                <button class="user-dropdown-item" onclick="triggerRestoreBackupPicker()"
+                  title="Restore platform data from a JSON backup file">
                   <span>📤</span> Restore DB from Backup (.json)
                 </button>
-                <input type="file" id="input-restore-backup" accept=".json" style="display:none;" onchange="handleRestoreBackupFile(event)" />
+                <input type="file" id="input-restore-backup" accept=".json" style="display:none;"
+                  onchange="handleRestoreBackupFile(event)" />
               </div>
 
               <div style="border-top: 1px solid var(--border-color); margin-top: 4px; padding-top: 4px;">
@@ -3220,7 +3416,8 @@
     <div class="overdue-alert-banner" id="overdue-banner" style="display: none;">
       <div>
         <strong>🚨 Immediate Management Intervention Required:</strong>
-        <span id="overdue-banner-text" style="font-size: 12.5px; margin-left: 5px;">0 operational tasks have exceeded deadline SLAs.</span>
+        <span id="overdue-banner-text" style="font-size: 12.5px; margin-left: 5px;">0 operational tasks have exceeded
+          deadline SLAs.</span>
       </div>
       <button class="btn-sm btn-wa" onclick="filterOverdueJobs()">
         Review Overdue Pathways ➔
@@ -3283,7 +3480,9 @@
               </tr>
             </thead>
             <tbody id="dashboard-recent-jobs-tbody">
-              <tr><td colspan="8" style="text-align:center; padding: 20px;">Loading tasks...</td></tr>
+              <tr>
+                <td colspan="8" style="text-align:center; padding: 20px;">Loading tasks...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -3304,10 +3503,12 @@
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
-            <select class="form-control" style="width: 200px; padding: 4px 8px; font-size: 12px;" id="calendar-staff-filter" onchange="loadCalendarView()">
+            <select class="form-control" style="width: 200px; padding: 4px 8px; font-size: 12px;"
+              id="calendar-staff-filter" onchange="loadCalendarView()">
               <option value="">All Team Members</option>
             </select>
-            <button class="btn-action-primary" style="padding: 5px 12px; font-size: 11.5px;" onclick="openNewJobDrawer()">
+            <button class="btn-action-primary" style="padding: 5px 12px; font-size: 11.5px;"
+              onclick="openNewJobDrawer()">
               + Schedule Task
             </button>
           </div>
@@ -3340,10 +3541,12 @@
           </div>
           <!-- Filter Controls -->
           <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-            <select class="form-control" style="width: 165px; font-size: 12px;" id="filter-job-employee" onchange="loadJobsTable()">
+            <select class="form-control" style="width: 165px; font-size: 12px;" id="filter-job-employee"
+              onchange="loadJobsTable()">
               <option value="">All Staff Members</option>
             </select>
-            <select class="form-control" style="width: 145px; font-size: 12px;" id="filter-job-status" onchange="loadJobsTable()">
+            <select class="form-control" style="width: 145px; font-size: 12px;" id="filter-job-status"
+              onchange="loadJobsTable()">
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="in_progress">In Progress</option>
@@ -3351,7 +3554,8 @@
               <option value="completed">Completed</option>
               <option value="stopped">Stopped</option>
             </select>
-            <select class="form-control" style="width: 130px; font-size: 12px;" id="filter-job-priority" onchange="loadJobsTable()">
+            <select class="form-control" style="width: 130px; font-size: 12px;" id="filter-job-priority"
+              onchange="loadJobsTable()">
               <option value="">All Priorities</option>
               <option value="urgent">🚨 Urgent</option>
               <option value="high">High</option>
@@ -3380,7 +3584,9 @@
               </tr>
             </thead>
             <tbody id="jobs-master-tbody">
-              <tr><td colspan="9" style="text-align:center; padding: 20px;">Loading jobs...</td></tr>
+              <tr>
+                <td colspan="9" style="text-align:center; padding: 20px;">Loading jobs...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -3417,7 +3623,9 @@
               </tr>
             </thead>
             <tbody id="staff-directory-tbody">
-              <tr><td colspan="9" style="text-align:center; padding: 20px;">Loading staff...</td></tr>
+              <tr>
+                <td colspan="9" style="text-align:center; padding: 20px;">Loading staff...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -3436,33 +3644,40 @@
               <span>📈</span> Executive Management Intelligence &amp; <span class="accent">5 Core Reports</span>
             </div>
             <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 3px;">
-              Audited via deterministic Section 6 mathematical scoring formulas (Fair Target N<sub>valid</sub>, Two-Tier Punctuality, S<sub>prod</sub>)
+              Audited via deterministic Section 6 mathematical scoring formulas (Fair Target N<sub>valid</sub>, Two-Tier
+              Punctuality, S<sub>prod</sub>)
             </div>
           </div>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
             <!-- Document Format Options -->
             <div style="display: flex; align-items: center; gap: 4px;">
               <span style="font-size: 11px; color: var(--text-dim);">Layout:</span>
-              <select id="report-page-orientation" class="form-control" onchange="changeReportOrientation(this.value)" style="padding: 3px 8px; font-size: 11px; width: 145px; height: 30px;">
+              <select id="report-page-orientation" class="form-control" onchange="changeReportOrientation(this.value)"
+                style="padding: 3px 8px; font-size: 11px; width: 145px; height: 30px;">
                 <option value="portrait" selected>📄 Portrait (Standard)</option>
                 <option value="landscape">📑 Landscape (Wide View)</option>
               </select>
             </div>
             <div style="display: flex; align-items: center; gap: 4px;">
               <span style="font-size: 11px; color: var(--text-dim);">Cover:</span>
-              <select id="report-cover-style" class="form-control" onchange="changeReportCoverStyle(this.value)" style="padding: 3px 8px; font-size: 11px; width: 175px; height: 30px;">
+              <select id="report-cover-style" class="form-control" onchange="changeReportCoverStyle(this.value)"
+                style="padding: 3px 8px; font-size: 11px; width: 175px; height: 30px;">
                 <option value="white" selected>📄 Corporate White (Print)</option>
                 <option value="dark">🌑 Obsidian Dark (Screen)</option>
                 <option value="none">🚫 Omit Cover Sheet</option>
               </select>
             </div>
-            <button class="btn-action-primary" style="padding: 6px 14px; font-size: 11.5px; gap: 5px;" onclick="loadReportsView()" title="Compute and render live document">
+            <button class="btn-action-primary" style="padding: 6px 14px; font-size: 11.5px; gap: 5px;"
+              onclick="loadReportsView()" title="Compute and render live document">
               ⚡ Generate Report
             </button>
-            <button class="btn-action-primary" style="padding: 6px 16px; font-size: 11.5px; gap: 6px; background: #059669; border-color: #059669;" onclick="printExecutiveReport()" title="Open dedicated A4 Print & PDF Studio">
+            <button class="btn-action-primary"
+              style="padding: 6px 16px; font-size: 11.5px; gap: 6px; background: #059669; border-color: #059669;"
+              onclick="printExecutiveReport()" title="Open dedicated A4 Print & PDF Studio">
               🖨️ Print / Save PDF
             </button>
-            <button class="btn-sm" onclick="exportReportsCSV()" title="Download tabular data as clean RFC-4180 CSV / Excel file">
+            <button class="btn-sm" onclick="exportReportsCSV()"
+              title="Download tabular data as clean RFC-4180 CSV / Excel file">
               📥 Excel / CSV
             </button>
           </div>
@@ -3485,7 +3700,8 @@
           <button class="report-tab-pill" id="btn-rep-5" onclick="switchReportTab(5)">
             <span>🏢</span> 5. Multi-Company Overview
           </button>
-          <button class="report-tab-pill" id="btn-rep-6" onclick="switchReportTab(6)" style="border-color: var(--red-border);">
+          <button class="report-tab-pill" id="btn-rep-6" onclick="switchReportTab(6)"
+            style="border-color: var(--red-border);">
             <span>📑</span> 6. Consolidated Dossier (All-In-One)
           </button>
         </div>
@@ -3494,45 +3710,59 @@
         <div class="report-filter-bar">
           <!-- Time Presets -->
           <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-            <span style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">
+            <span
+              style="font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; font-family: var(--font-mono);">
               Period:
             </span>
-            <button class="report-filter-pill" id="pill-preset-today" onclick="setReportDatePreset('today')">⚡ Today</button>
-            <button class="report-filter-pill" id="pill-preset-week" onclick="setReportDatePreset('week')">📅 This Week</button>
-            <button class="report-filter-pill" id="pill-preset-month" onclick="setReportDatePreset('month')">🗓️ This Month</button>
-            <button class="report-filter-pill" id="pill-preset-lastmonth" onclick="setReportDatePreset('lastmonth')">⏪ Last Month</button>
-            <button class="report-filter-pill active" id="pill-preset-all" onclick="setReportDatePreset('all')">🌐 All Time</button>
+            <button class="report-filter-pill" id="pill-preset-today" onclick="setReportDatePreset('today')">⚡
+              Today</button>
+            <button class="report-filter-pill" id="pill-preset-week" onclick="setReportDatePreset('week')">📅 This
+              Week</button>
+            <button class="report-filter-pill" id="pill-preset-month" onclick="setReportDatePreset('month')">🗓️ This
+              Month</button>
+            <button class="report-filter-pill" id="pill-preset-lastmonth" onclick="setReportDatePreset('lastmonth')">⏪
+              Last Month</button>
+            <button class="report-filter-pill active" id="pill-preset-all" onclick="setReportDatePreset('all')">🌐 All
+              Time</button>
           </div>
 
           <!-- Custom Date & Staff Filter -->
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 4px;">
               <span style="font-size: 11px; color: var(--text-dim);">From:</span>
-              <input type="date" id="report-filter-start" class="form-control" style="padding: 4px 8px; font-size: 11px; width: 125px; height: 30px;" />
+              <input type="date" id="report-filter-start" class="form-control"
+                style="padding: 4px 8px; font-size: 11px; width: 125px; height: 30px;" />
             </div>
             <div style="display: flex; align-items: center; gap: 4px;">
               <span style="font-size: 11px; color: var(--text-dim);">To:</span>
-              <input type="date" id="report-filter-end" class="form-control" style="padding: 4px 8px; font-size: 11px; width: 125px; height: 30px;" />
+              <input type="date" id="report-filter-end" class="form-control"
+                style="padding: 4px 8px; font-size: 11px; width: 125px; height: 30px;" />
             </div>
             <div style="display: flex; align-items: center; gap: 4px;">
               <span style="font-size: 11px; color: var(--text-dim);">Staff:</span>
-              <select id="report-filter-staff" class="form-control" style="padding: 4px 8px; font-size: 11px; width: 160px; height: 30px;" onchange="applyReportCustomFilter()">
+              <select id="report-filter-staff" class="form-control"
+                style="padding: 4px 8px; font-size: 11px; width: 160px; height: 30px;"
+                onchange="applyReportCustomFilter()">
                 <option value="">All Staff</option>
               </select>
             </div>
-            <button class="btn-action-primary" style="padding: 4px 10px; font-size: 11px; height: 30px;" onclick="applyReportCustomFilter()">
+            <button class="btn-action-primary" style="padding: 4px 10px; font-size: 11px; height: 30px;"
+              onclick="applyReportCustomFilter()">
               Apply Filter
             </button>
-            <button class="btn-sm" style="padding: 4px 8px; font-size: 11px; height: 30px;" onclick="resetReportFilter()">
+            <button class="btn-sm" style="padding: 4px 8px; font-size: 11px; height: 30px;"
+              onclick="resetReportFilter()">
               Reset
             </button>
           </div>
         </div>
 
         <!-- Filter Scope Indicator Chip -->
-        <div style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
+        <div
+          style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
           <div id="report-filter-summary-chip">
-            <span>📅</span> Active Scope: <strong>All Staff</strong> · <strong>All Time</strong> · <strong>1 Job In Scope</strong>
+            <span>📅</span> Active Scope: <strong>All Staff</strong> · <strong>All Time</strong> · <strong>1 Job In
+              Scope</strong>
           </div>
           <div style="font-family: var(--font-mono); font-size: 10px;">
             Export Ready: Clean A4 PDF &amp; Tabular RFC-4180 CSV
@@ -3570,12 +3800,15 @@
       <div class="pdf-document-wrapper" id="pdf-report-container">
 
         <!-- On-Screen Document Controls Banner (Web View Only) -->
-        <div class="web-only cover-preview-bar" style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px dashed var(--border-color); border-radius: var(--radius-sm); padding: 9px 14px;">
+        <div class="web-only cover-preview-bar"
+          style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px dashed var(--border-color); border-radius: var(--radius-sm); padding: 9px 14px;">
           <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim);">
             <span style="font-size: 14px;">📑</span>
-            <span>Document Layout: <strong style="color:var(--text-main);">Live Executive Report Sheet</strong> · <span id="cover-status-badge" style="color:var(--emerald);">Cover Page Attached (Page 1 in PDF)</span></span>
+            <span>Document Layout: <strong style="color:var(--text-main);">Live Executive Report Sheet</strong> · <span
+                id="cover-status-badge" style="color:var(--emerald);">Cover Page Attached (Page 1 in PDF)</span></span>
           </div>
-          <button type="button" class="btn-sm" id="btn-toggle-cover-preview" onclick="toggleCoverOnScreen()" style="padding: 3px 10px; font-size: 11px;">
+          <button type="button" class="btn-sm" id="btn-toggle-cover-preview" onclick="toggleCoverOnScreen()"
+            style="padding: 3px 10px; font-size: 11px;">
             👁️ Preview Cover Page
           </button>
         </div>
@@ -3596,7 +3829,8 @@
               <span class="cover-title-accent">&amp; TASK MANAGEMENT AUDIT</span>
             </h1>
             <div class="cover-desc">
-              Deterministic analytical audit of multi-tenant task throughput, strict SLA punctuality, and financial capital realization under Section 6 PostgreSQL scoring formulas.
+              Deterministic analytical audit of multi-tenant task throughput, strict SLA punctuality, and financial
+              capital realization under Section 6 PostgreSQL scoring formulas.
             </div>
           </div>
 
@@ -3652,22 +3886,27 @@
               <span class="dot">●</span> KOART SOLUTIONS · EXECUTIVE OPERATIONS REPORT
             </div>
             <div>
-              <span id="doc-running-ref">REF: KO-REP-202611-001</span> · <span id="doc-running-ws">Apex</span> · <strong>CONFIDENTIAL</strong>
+              <span id="doc-running-ref">REF: KO-REP-202611-001</span> · <span id="doc-running-ws">Apex</span> ·
+              <strong>CONFIDENTIAL</strong>
             </div>
           </div>
 
           <!-- Document Main Heading Banner -->
-          <div style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+          <div
+            style="margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
             <div>
-              <h2 id="doc-report-title" style="font-family: var(--font-display); font-size: 19px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em;">
+              <h2 id="doc-report-title"
+                style="font-family: var(--font-display); font-size: 19px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em;">
                 Report 1: Staff Productivity &amp; Leaderboard Audit
               </h2>
               <div id="doc-report-desc" style="font-size: 11.5px; color: var(--text-muted); margin-top: 3px;">
-                Deterministic employee rankings computed via Fair Target Denominator N<sub>valid</sub>, Two-Tier Punctuality, and Efficiency Score.
+                Deterministic employee rankings computed via Fair Target Denominator N<sub>valid</sub>, Two-Tier
+                Punctuality, and Efficiency Score.
               </div>
             </div>
             <div style="text-align: right; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-dim);">
-              <div>Scope: <strong id="doc-date-scope" style="color:var(--text-main);">All Historical Records</strong></div>
+              <div>Scope: <strong id="doc-date-scope" style="color:var(--text-main);">All Historical Records</strong>
+              </div>
               <div>Generated: <span id="doc-generated-time">2026-11-07 10:15 UTC</span></div>
             </div>
           </div>
@@ -3679,19 +3918,25 @@
               <div class="kpi-card">
                 <div class="kpi-label">Volume Target</div>
                 <div class="kpi-value" id="doc-kpi-vol">0 / 0</div>
-                <div class="doc-meter"><div class="bar" id="doc-meter-vol" style="width: 0%;"></div></div>
+                <div class="doc-meter">
+                  <div class="bar" id="doc-meter-vol" style="width: 0%;"></div>
+                </div>
                 <div class="kpi-card-sub" id="doc-kpi-vol-sub">0% Target Delivered</div>
               </div>
               <div class="kpi-card">
                 <div class="kpi-label">Realized Capital</div>
                 <div class="kpi-value green" id="doc-kpi-val">LKR 0.00</div>
-                <div class="doc-meter green"><div class="bar" id="doc-meter-val" style="width: 0%;"></div></div>
+                <div class="doc-meter green">
+                  <div class="bar" id="doc-meter-val" style="width: 0%;"></div>
+                </div>
                 <div class="kpi-card-sub">Financial Realization</div>
               </div>
               <div class="kpi-card">
                 <div class="kpi-label">Strict On-Time SLA</div>
                 <div class="kpi-value blue" id="doc-kpi-ontime">100%</div>
-                <div class="doc-meter blue"><div class="bar" id="doc-meter-ontime" style="width: 0%;"></div></div>
+                <div class="doc-meter blue">
+                  <div class="bar" id="doc-meter-ontime" style="width: 0%;"></div>
+                </div>
                 <div class="kpi-card-sub">Strict SLA Target</div>
               </div>
               <div class="kpi-card">
@@ -3949,31 +4194,71 @@
        MODAL 1: NEW TASK CREATION DRAWER
        ========================================================================= -->
   <div class="modal-overlay" id="modal-new-job">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width: 620px;">
       <div class="modal-header">
         <h3 class="modal-title"><span>📝</span> Create New Operational Task</h3>
         <button class="btn-close-modal" onclick="closeModal('modal-new-job')">✕</button>
       </div>
 
       <form id="form-new-job" onsubmit="handleCreateJob(event)">
+        <!-- Step 1: Assign Responsible Staff (Triggers Recurrent & Previous Task Assistant) -->
         <div class="form-group">
-          <label class="form-label">Task Title *</label>
-          <input type="text" class="form-control" id="job-title" placeholder="e.g. Client Deliverables Packaging & Print Audit" required />
+          <label class="form-label">Assign Responsible Staff *</label>
+          <select class="form-control" id="job-employee-id" onchange="onJobEmployeeSelected(this.value)" required>
+            <option value="">Select Employee...</option>
+          </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Task Instructions &amp; Deliverables</label>
-          <textarea class="form-control" id="job-desc" rows="3" placeholder="Provide complete technical instructions for employee..."></textarea>
-        </div>
+        <!-- Step 1.5: Dynamic Recurrent & Previous Task Assistant Panel -->
+        <div id="recurrent-task-panel" class="recurrent-panel" style="display: none;">
+          <div class="recurrent-panel-header">
+            <div class="recurrent-panel-title">
+              <span>🔁</span>
+              <span id="recurrent-panel-heading">Previous &amp; Recurrent Tasks</span>
+            </div>
+            <button type="button" class="btn-xs"
+              style="background: transparent; border: 1px solid var(--border-color); color: var(--text-dim); padding: 2px 8px; font-size: 10px; cursor: pointer; border-radius: 4px;"
+              onclick="resetJobFormFields()">
+              ✕ Clear Form
+            </button>
+          </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Assign Responsible Staff *</label>
-            <select class="form-control" id="job-employee-id" required>
-              <option value="">Select Employee...</option>
+          <!-- Dropdown selector for previous tasks -->
+          <div style="margin-bottom: 8px;">
+            <select class="form-control" id="select-recurrent-task"
+              style="font-size: 12px; padding: 7px 10px; background: var(--bg-surface); border-color: rgba(219, 0, 49, 0.35);"
+              onchange="applySelectedRecurrentTask(this.value)">
+              <option value="">-- ⚡ Pick a previous / recurrent task to auto-fill --</option>
             </select>
           </div>
 
+          <!-- Quick click chips container -->
+          <div id="recurrent-chips-container" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;"></div>
+
+          <!-- Auto-fill confirmation notification badge -->
+          <div id="recurrent-autofill-indicator" class="recurrent-badge-autofill">
+            <span>✓</span>
+            <span id="recurrent-autofill-msg">Form auto-filled from previous task! You can adjust details below before
+              dispatch.</span>
+          </div>
+        </div>
+
+        <!-- Task Title -->
+        <div class="form-group">
+          <label class="form-label">Task Title *</label>
+          <input type="text" class="form-control" id="job-title"
+            placeholder="e.g. Client Deliverables Packaging & Print Audit" required />
+        </div>
+
+        <!-- Task Instructions & Deliverables -->
+        <div class="form-group">
+          <label class="form-label">Task Instructions &amp; Deliverables</label>
+          <textarea class="form-control" id="job-desc" rows="3"
+            placeholder="Provide complete technical instructions for employee..."></textarea>
+        </div>
+
+        <!-- Priority & Valuation -->
+        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Priority Level</label>
             <select class="form-control" id="job-priority">
@@ -3983,18 +4268,18 @@
               <option value="low">Low</option>
             </select>
           </div>
-        </div>
 
-        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Job Valuation (LKR)</label>
-            <input type="number" class="form-control" id="job-value" placeholder="45000" min="0" step="500" value="45000" />
+            <input type="number" class="form-control" id="job-value" placeholder="45000" min="0" step="500"
+              value="45000" />
           </div>
+        </div>
 
-          <div class="form-group">
-            <label class="form-label">Deadline Date &amp; Time *</label>
-            <input type="datetime-local" class="form-control" id="job-due-date" required />
-          </div>
+        <!-- Deadline -->
+        <div class="form-group">
+          <label class="form-label">Deadline Date &amp; Time *</label>
+          <input type="datetime-local" class="form-control" id="job-due-date" required />
         </div>
 
         <!-- Privacy Toggle Switch -->
@@ -4004,7 +4289,8 @@
               <strong>🔒 Valuation Privacy Control</strong>
               <span>Display financial value (LKR) to employee on WhatsApp card</span>
             </div>
-            <input type="checkbox" id="job-privacy-toggle" checked style="width: 20px; height: 20px; accent-color: var(--red);" />
+            <input type="checkbox" id="job-privacy-toggle" checked
+              style="width: 20px; height: 20px; accent-color: var(--red);" />
           </div>
         </div>
 
@@ -4055,7 +4341,8 @@
         </div>
         <div class="form-group">
           <label class="form-label">Extension Reason &amp; Audit Note</label>
-          <textarea class="form-control" id="pw1-reason" rows="2" placeholder="Record reason for grant of extra time..."></textarea>
+          <textarea class="form-control" id="pw1-reason" rows="2"
+            placeholder="Record reason for grant of extra time..."></textarea>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px;">
           <button type="submit" class="btn-action-primary">✓ Grant Extension &amp; Notify WhatsApp</button>
@@ -4074,7 +4361,8 @@
         </div>
         <div class="form-group">
           <label class="form-label">Cancellation Reason</label>
-          <textarea class="form-control" id="pw2-reason" rows="2" placeholder="Officially record reason to cease work..."></textarea>
+          <textarea class="form-control" id="pw2-reason" rows="2"
+            placeholder="Officially record reason to cease work..."></textarea>
         </div>
         <div class="form-group">
           <div class="switch-wrap">
@@ -4086,7 +4374,8 @@
           </div>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="submit" class="btn-action-primary" style="background: var(--red);">🛑 Stop Work &amp; Notify WhatsApp</button>
+          <button type="submit" class="btn-action-primary" style="background: var(--red);">🛑 Stop Work &amp; Notify
+            WhatsApp</button>
         </div>
       </form>
 
@@ -4098,7 +4387,8 @@
         </div>
         <div class="form-group">
           <label class="form-label">Handover Instructions</label>
-          <textarea class="form-control" id="pw3-note" rows="2" placeholder="Provide context for new assignee..."></textarea>
+          <textarea class="form-control" id="pw3-note" rows="2"
+            placeholder="Provide context for new assignee..."></textarea>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px;">
           <button type="submit" class="btn-action-primary">🔄 Reassign &amp; Dispatch WhatsApp</button>
@@ -4112,7 +4402,8 @@
           <textarea class="form-control" id="pw4-note" rows="2" placeholder="Record completion feedback..."></textarea>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <button type="submit" class="btn-action-primary" style="background: var(--emerald);">✓ Complete &amp; Realize Value</button>
+          <button type="submit" class="btn-action-primary" style="background: var(--emerald);">✓ Complete &amp; Realize
+            Value</button>
         </div>
       </form>
     </div>
@@ -4144,7 +4435,8 @@
 
       <div style="display: flex; justify-content: flex-end; gap: 8px;">
         <button class="btn-sm" onclick="copyWaText()">📋 Copy Text</button>
-        <a href="#" target="_blank" class="btn-action-primary" id="btn-open-wa-me" style="background: #25d366; color: #0b141a; text-decoration: none;">
+        <a href="#" target="_blank" class="btn-action-primary" id="btn-open-wa-me"
+          style="background: #25d366; color: #0b141a; text-decoration: none;">
           💬 Open in WhatsApp Web / App ➔
         </a>
       </div>
@@ -4163,7 +4455,7 @@
         </div>
         <h2 class="auth-title">Operational &amp; Task Management Platform</h2>
         <p class="auth-subtitle">Phase 1 Operational Architecture · Multi-Tenant Task Orchestration</p>
-        
+
         <!-- Segmented Tab Switcher -->
         <div class="auth-segmented-tabs">
           <button class="auth-tab-btn active" id="tab-auth-login" onclick="switchAuthTab('login')">
@@ -4177,7 +4469,9 @@
 
       <!-- TAB 1: LOGIN -->
       <div class="auth-tab-content active" id="auth-panel-login">
-        <div id="login-error-msg" style="display:none; color: #fca5a5; background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.35); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 12px; margin-bottom: 12px;"></div>
+        <div id="login-error-msg"
+          style="display:none; color: #fca5a5; background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.35); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 12px; margin-bottom: 12px;">
+        </div>
 
         <form id="form-login" onsubmit="handleLogin(event)">
           <div class="form-group">
@@ -4189,7 +4483,8 @@
             <input type="password" class="form-control" id="login-password" placeholder="••••••••" required />
           </div>
 
-          <button type="submit" class="btn-action-primary" style="width: 100%; justify-content: center; padding: 11px; margin-top: 0.5rem; font-size: 13.5px;">
+          <button type="submit" class="btn-action-primary"
+            style="width: 100%; justify-content: center; padding: 11px; margin-top: 0.5rem; font-size: 13.5px;">
             Sign In to Workspace ➔
           </button>
         </form>
@@ -4210,7 +4505,9 @@
 
       <!-- TAB 2: REGISTER WITH DUAL TIER SELECTION -->
       <div class="auth-tab-content" id="auth-panel-register">
-        <div id="reg-error-msg" style="display:none; color: #fca5a5; background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.35); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 12px; margin-bottom: 12px;"></div>
+        <div id="reg-error-msg"
+          style="display:none; color: #fca5a5; background: rgba(220, 38, 38, 0.15); border: 1px solid rgba(220, 38, 38, 0.35); border-radius: var(--radius-sm); padding: 9px 12px; font-size: 12px; margin-bottom: 12px;">
+        </div>
 
         <form id="form-register" onsubmit="handleRegister(event)">
           <div class="form-group">
@@ -4234,31 +4531,36 @@
             <div class="tier-cards-grid">
               <!-- Tier 1: Company Account -->
               <div class="tier-card active" id="card-tier-company" onclick="selectTier('company')">
-                <input type="radio" name="account_tier" id="tier-radio-company" value="company" checked style="display: none;" />
+                <input type="radio" name="account_tier" id="tier-radio-company" value="company" checked
+                  style="display: none;" />
                 <div class="tier-card-badge">Single Org Limit</div>
                 <div class="tier-card-icon">🏢</div>
                 <div class="tier-card-title">Company Account</div>
                 <div class="tier-card-desc">
-                  Single organization workspace. Ideal for single agency studios, independent marketing firms, and standalone business entities.
+                  Single organization workspace. Ideal for single agency studios, independent marketing firms, and
+                  standalone business entities.
                 </div>
                 <div class="tier-card-limit">Limit: Exactly 1 Workspace</div>
               </div>
 
               <!-- Tier 2: Individual / Multi-Controller -->
               <div class="tier-card" id="card-tier-individual" onclick="selectTier('individual')">
-                <input type="radio" name="account_tier" id="tier-radio-individual" value="individual" style="display: none;" />
+                <input type="radio" name="account_tier" id="tier-radio-individual" value="individual"
+                  style="display: none;" />
                 <div class="tier-card-badge gold">Multi-Org Switcher</div>
                 <div class="tier-card-icon">👑</div>
                 <div class="tier-card-title">Individual Controller</div>
                 <div class="tier-card-desc">
-                  Multi-business controller. Register &amp; switch between multiple subsidiary brands, client accounts, or separate ventures.
+                  Multi-business controller. Register &amp; switch between multiple subsidiary brands, client accounts,
+                  or separate ventures.
                 </div>
                 <div class="tier-card-limit">Limit: Up to 999 Workspaces</div>
               </div>
             </div>
           </div>
 
-          <button type="submit" class="btn-action-primary" style="width: 100%; justify-content: center; padding: 11px; margin-top: 0.5rem; font-size: 13.5px;">
+          <button type="submit" class="btn-action-primary"
+            style="width: 100%; justify-content: center; padding: 11px; margin-top: 0.5rem; font-size: 13.5px;">
             ✓ Create Account &amp; Proceed to Workspace ➔
           </button>
         </form>
@@ -4266,7 +4568,8 @@
 
       <div class="auth-card-footer">
         <span>🔐 End-to-End Isolated Data Tenancy · PostgreSQL Trigger Security Guards</span>
-        <button type="button" class="btn-close-auth" id="btn-close-auth-portal" onclick="closeAuthModal()" style="display: none;">
+        <button type="button" class="btn-close-auth" id="btn-close-auth-portal" onclick="closeAuthModal()"
+          style="display: none;">
           Continue as Guest / Dismiss ✕
         </button>
       </div>
@@ -4292,17 +4595,20 @@
       </div>
 
       <form id="form-onboard" onsubmit="handleOnboardCompany(event)">
-        <div style="font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--red); text-transform: uppercase; margin-bottom: 8px;">
+        <div
+          style="font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--red); text-transform: uppercase; margin-bottom: 8px;">
           Step 1: Organization Blueprint
         </div>
         <div class="form-group">
           <label class="form-label">Company / Brand Workspace Name *</label>
-          <input type="text" class="form-control" id="onboard-comp-name" placeholder="e.g. KOart Creative Studios Ltd / Apex Digital" required />
+          <input type="text" class="form-control" id="onboard-comp-name"
+            placeholder="e.g. KOart Creative Studios Ltd / Apex Digital" required />
         </div>
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Business Category *</label>
-            <input type="text" class="form-control" id="onboard-comp-cat" placeholder="e.g. Creative Digital Agency / E-Commerce" required />
+            <input type="text" class="form-control" id="onboard-comp-cat"
+              placeholder="e.g. Creative Digital Agency / E-Commerce" required />
           </div>
           <div class="form-group">
             <label class="form-label">Operating Valuation Currency *</label>
@@ -4317,7 +4623,8 @@
           </div>
         </div>
 
-        <div style="font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--red); text-transform: uppercase; margin: 16px 0 8px;">
+        <div
+          style="font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--red); text-transform: uppercase; margin: 16px 0 8px;">
           Step 2: Primary Staff Lead &amp; WhatsApp Integration
         </div>
         <div class="form-row">
@@ -4327,18 +4634,21 @@
           </div>
           <div class="form-group">
             <label class="form-label">Role / Designation *</label>
-            <input type="text" class="form-control" id="onboard-staff-role" placeholder="e.g. Lead Designer / Project Lead" required />
+            <input type="text" class="form-control" id="onboard-staff-role"
+              placeholder="e.g. Lead Designer / Project Lead" required />
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Lead WhatsApp Number (E.164 Format) *</label>
           <input type="text" class="form-control" id="onboard-staff-phone" placeholder="+94771234567" required />
           <span style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px; display: block;">
-            Include country code with leading + (e.g., +94 for Sri Lanka). Used for automated WhatsApp Job Card dispatch.
+            Include country code with leading + (e.g., +94 for Sri Lanka). Used for automated WhatsApp Job Card
+            dispatch.
           </span>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+        <div
+          style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
           <button type="button" class="btn-sm" onclick="closeModal('modal-onboard')">Cancel</button>
           <button type="submit" class="btn-action-primary">✓ Provision Workspace &amp; Directory ➔</button>
         </div>
@@ -4363,7 +4673,8 @@
         </div>
         <div class="form-group">
           <label class="form-label">Role / Designation *</label>
-          <input type="text" class="form-control" id="staff-role" placeholder="e.g. UI/UX Designer / Web Developer" required />
+          <input type="text" class="form-control" id="staff-role" placeholder="e.g. UI/UX Designer / Web Developer"
+            required />
         </div>
         <div class="form-group">
           <label class="form-label">WhatsApp Number (E.164 format) *</label>
@@ -4387,19 +4698,23 @@
         <button class="btn-close-modal" onclick="closeModal('modal-change-status')">✕</button>
       </div>
 
-      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 1rem;">
+      <div
+        style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 1rem;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
-          <span style="font-family: var(--font-mono); font-weight: 800; color: var(--red);" id="status-modal-job-code">#JOB-XXXX</span>
+          <span style="font-family: var(--font-mono); font-weight: 800; color: var(--red);"
+            id="status-modal-job-code">#JOB-XXXX</span>
           <span class="chip" id="status-modal-curr-chip">CURRENT STATUS</span>
         </div>
-        <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main);" id="status-modal-title">Task Title</div>
-        <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;" id="status-modal-staff">Assigned to: Kasun Bandara</div>
+        <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main);" id="status-modal-title">Task Title
+        </div>
+        <div style="font-size: 11px; color: var(--text-dim); margin-top: 4px;" id="status-modal-staff">Assigned to:
+          Kasun Bandara</div>
       </div>
 
       <form id="form-change-status" onsubmit="handleModalStatusSubmit(event)">
         <input type="hidden" id="status-modal-job-id" />
         <label class="form-label">Select New Operational Status *</label>
-        
+
         <div class="status-options-grid">
           <div class="status-option-card" id="card-status-pending" onclick="pickModalStatus('pending')">
             <span class="status-card-icon">⏳</span>
@@ -4440,10 +4755,12 @@
 
         <div class="form-group" style="margin-top: 1rem;">
           <label class="form-label">Manager Audit Note (Optional)</label>
-          <input type="text" class="form-control" id="status-modal-note" placeholder="e.g. Completed design mockups, waiting on client feedback" />
+          <input type="text" class="form-control" id="status-modal-note"
+            placeholder="e.g. Completed design mockups, waiting on client feedback" />
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
+        <div
+          style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color);">
           <button type="button" class="btn-sm" onclick="closeModal('modal-change-status')">Cancel</button>
           <button type="submit" class="btn-action-primary">✓ Apply Status Transition ➔</button>
         </div>
@@ -4459,7 +4776,8 @@
       <div class="modal-header">
         <div>
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <span style="font-family: var(--font-mono); font-weight: 800; font-size: 15px; color: var(--red);" id="timeline-modal-code">#JOB-XXXX</span>
+            <span style="font-family: var(--font-mono); font-weight: 800; font-size: 15px; color: var(--red);"
+              id="timeline-modal-code">#JOB-XXXX</span>
             <span class="chip" id="timeline-modal-status-chip">STATUS</span>
             <span class="chip" id="timeline-modal-prio-chip">PRIORITY</span>
           </div>
@@ -4472,30 +4790,42 @@
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.15rem;">
         <div class="kpi-card" style="padding: 8px 10px;">
           <div class="kpi-label" style="font-size: 9.5px;">Stated Value</div>
-          <div style="font-size: 13.5px; font-weight: 800; color: var(--red); font-family: var(--font-mono); margin-top: 2px;" id="timeline-modal-val">LKR 0</div>
+          <div
+            style="font-size: 13.5px; font-weight: 800; color: var(--red); font-family: var(--font-mono); margin-top: 2px;"
+            id="timeline-modal-val">LKR 0</div>
         </div>
         <div class="kpi-card" style="padding: 8px 10px;">
           <div class="kpi-label" style="font-size: 9.5px;">Assignee</div>
-          <div style="font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;" id="timeline-modal-staff">Staff Name</div>
+          <div
+            style="font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;"
+            id="timeline-modal-staff">Staff Name</div>
         </div>
         <div class="kpi-card" style="padding: 8px 10px;">
           <div class="kpi-label" style="font-size: 9.5px;">Current Due</div>
-          <div style="font-size: 11px; font-weight: 700; font-family: var(--font-mono); margin-top: 2px;" id="timeline-modal-due">Due Date</div>
+          <div style="font-size: 11px; font-weight: 700; font-family: var(--font-mono); margin-top: 2px;"
+            id="timeline-modal-due">Due Date</div>
         </div>
         <div class="kpi-card" style="padding: 8px 10px;">
           <div class="kpi-label" style="font-size: 9.5px;">Audit Counters</div>
-          <div style="font-size: 11px; font-weight: 700; font-family: var(--font-mono); color: var(--gold); margin-top: 2px;" id="timeline-modal-stats">0 ext · 0 rem</div>
+          <div
+            style="font-size: 11px; font-weight: 700; font-family: var(--font-mono); color: var(--gold); margin-top: 2px;"
+            id="timeline-modal-stats">0 ext · 0 rem</div>
         </div>
       </div>
 
       <!-- Instructions Box -->
-      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 1rem;">
-        <div style="font-family: var(--font-mono); font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 3px;">Operational Brief &amp; Instructions</div>
-        <div style="font-size: 12px; color: var(--text-main); line-height: 1.45;" id="timeline-modal-desc">No instructions provided.</div>
+      <div
+        style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 1rem;">
+        <div
+          style="font-family: var(--font-mono); font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 3px;">
+          Operational Brief &amp; Instructions</div>
+        <div style="font-size: 12px; color: var(--text-main); line-height: 1.45;" id="timeline-modal-desc">No
+          instructions provided.</div>
       </div>
 
       <!-- Chronological Journey Timeline -->
-      <div style="font-family: var(--font-mono); font-size: 10px; font-weight: 800; color: var(--red); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
+      <div
+        style="font-family: var(--font-mono); font-size: 10px; font-weight: 800; color: var(--red); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px;">
         📜 Operational Journey &amp; Timestamped Telemetry
       </div>
       <div class="timeline-container" id="timeline-nodes-list">
@@ -4503,11 +4833,13 @@
       </div>
 
       <!-- Append Executive Note Form -->
-      <form id="form-add-timeline-note" onsubmit="handleAddExecutiveNote(event)" style="border-top: 1px solid var(--border-color); margin-top: 1.25rem; padding-top: 1rem;">
+      <form id="form-add-timeline-note" onsubmit="handleAddExecutiveNote(event)"
+        style="border-top: 1px solid var(--border-color); margin-top: 1.25rem; padding-top: 1rem;">
         <input type="hidden" id="timeline-note-job-id" />
         <label class="form-label">Add Executive Audit Note to Timeline</label>
         <div style="display: flex; gap: 8px;">
-          <input type="text" class="form-control" id="timeline-note-text" placeholder="e.g. Client confirmed revised assets, waiting on final sign-off" required />
+          <input type="text" class="form-control" id="timeline-note-text"
+            placeholder="e.g. Client confirmed revised assets, waiting on final sign-off" required />
           <button type="submit" class="btn-action-primary" style="white-space: nowrap; padding: 0 16px;">
             + Add Note
           </button>
@@ -4532,14 +4864,18 @@
       </div>
 
       <!-- Staff Summary Badge -->
-      <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 1rem;">
+      <div
+        style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 1rem;">
         <div>
           <div style="font-weight: 700; font-size: 13.5px;" id="agenda-modal-emp-name">Employee Name</div>
-          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);" id="agenda-modal-phone">+947XXXXXXXX</div>
+          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-dim);" id="agenda-modal-phone">
+            +947XXXXXXXX</div>
         </div>
         <div style="text-align: right;">
           <div class="chip chip-blue" id="agenda-modal-task-count">0 Active Tasks</div>
-          <div style="font-family: var(--font-mono); font-size: 11px; color: #25d366; font-weight: 700; margin-top: 3px;" id="agenda-modal-committed-val">LKR 0</div>
+          <div
+            style="font-family: var(--font-mono); font-size: 11px; color: #25d366; font-weight: 700; margin-top: 3px;"
+            id="agenda-modal-committed-val">LKR 0</div>
         </div>
       </div>
 
@@ -4556,7 +4892,8 @@
 
       <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 1rem;">
         <button class="btn-sm" onclick="copyAgendaText()">📋 Copy Briefing Text</button>
-        <a href="#" target="_blank" class="btn-action-primary" id="btn-agenda-open-wa" style="background: #25d366; color: #0b141a; text-decoration: none;">
+        <a href="#" target="_blank" class="btn-action-primary" id="btn-agenda-open-wa"
+          style="background: #25d366; color: #0b141a; text-decoration: none;">
           💬 Send via WhatsApp Web / App ➔
         </a>
       </div>
@@ -4600,7 +4937,7 @@
     function applyTheme(themeName) {
       document.body.classList.remove('theme-dark', 'theme-light');
       document.body.classList.add(themeName);
-      try { localStorage.setItem('koart_theme', themeName); } catch (e) {}
+      try { localStorage.setItem('koart_theme', themeName); } catch (e) { }
 
       const icon = document.getElementById('theme-toggle-icon');
       const text = document.getElementById('theme-toggle-text');
@@ -4622,7 +4959,7 @@
     try {
       const savedTheme = localStorage.getItem('koart_theme') || 'theme-dark';
       applyTheme(savedTheme);
-    } catch (e) {}
+    } catch (e) { }
 
     // Navigation Switcher
     function switchTab(tabName) {
@@ -4846,7 +5183,7 @@
       try {
         const savedTheme = localStorage.getItem('koart_theme') || 'theme-dark';
         applyTheme(savedTheme);
-      } catch (e) {}
+      } catch (e) { }
 
       // 0b. Check or Restore User Session
       const savedUser = localStorage.getItem('koart_user_session');
@@ -4868,7 +5205,7 @@
       const nameParts = (state.user.fullName || 'User').split(' ');
       const shortName = nameParts[0];
       const initials = (nameParts[0][0] + (nameParts[1] ? nameParts[1][0] : '')).toUpperCase();
-      
+
       const navAvatar = document.getElementById('nav-user-avatar');
       const navName = document.getElementById('nav-user-name');
       const navTier = document.getElementById('nav-user-tier');
@@ -4904,7 +5241,7 @@
           document.getElementById('active-tier-badge').textContent = compRes.userAccountType === 'individual'
             ? `Multi-Controller (0 of ${compRes.maxCompanies})`
             : `Single Org (0 of 1)`;
-          
+
           // Guide newly registered user to create their first workspace
           openOnboardModal();
         }
@@ -5021,7 +5358,7 @@
           '<div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">👥 Staff Directory is empty</div>' +
           '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">Add your team members with their WhatsApp phone numbers for zero-friction task dispatch.</div>' +
           '<button class="btn-action-primary" style="margin: 0 auto; font-size: 12px;" onclick="openAddStaffModal()">+ Register First Staff Member</button>' +
-        '</td></tr>';
+          '</td></tr>';
         return;
       }
 
@@ -5037,6 +5374,9 @@
           <td><span class="chip ${emp.isActive ? 'chip-green' : 'chip-red'}">${emp.isActive ? 'Active' : 'Inactive'}</span></td>
           <td>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="btn-sm btn-action-primary" onclick="openNewJobForStaff('${emp.id}')" title="Assign New Task (with recurrent task templates)">
+                + Task
+              </button>
               <button class="btn-sm btn-wa" onclick="openStaffDailyAgenda('${emp.id}')" title="Generate & Send Daily Morning WhatsApp Agenda Briefing">
                 🌅 Daily Agenda
               </button>
@@ -5083,7 +5423,7 @@
             '<div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">📋 No operational tasks yet</div>' +
             '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">Create your first task to track deadlines, financial valuations, and WhatsApp dispatches.</div>' +
             '<button class="btn-action-primary" style="margin: 0 auto; font-size: 12px;" onclick="openNewJobDrawer()">+ Create First Job Assignment</button>' +
-          '</td></tr>';
+            '</td></tr>';
           return;
         }
 
@@ -5114,7 +5454,7 @@
             '<div style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">📋 No operational jobs found</div>' +
             '<div style="font-size: 12px; color: var(--text-dim); margin-bottom: 14px;">No tasks match the active staff/status/priority filters.</div>' +
             '<button class="btn-action-primary" style="margin: 0 auto; font-size: 12px;" onclick="openNewJobDrawer()">+ Create New Task</button>' +
-          '</td></tr>';
+            '</td></tr>';
           return;
         }
         tbody.innerHTML = state.jobs.map(j => renderJobRow(j, true)).join('');
@@ -5179,6 +5519,9 @@
             <div style="display:flex; gap:4px; flex-wrap:wrap;">
               <button class="btn-sm btn-timeline-quick" onclick="openJobTimelineDrawer('${job.id}')" title="Operational Journey &amp; Telemetry">
                 📜 Journey
+              </button>
+              <button class="btn-sm" onclick="duplicateJobAsRecurrent('${job.id}')" title="Re-assign / Clone as Recurrent Task" style="background: rgba(219,0,49,0.1); border-color: rgba(219,0,49,0.3); color: var(--red);">
+                🔁 Repeat
               </button>
               <button class="btn-sm btn-status-quick" onclick="openChangeStatusModal('${job.id}')" title="Change Status with Audit Note">
                 ⚡ Status
@@ -5269,9 +5612,9 @@
     }
 
     // ------------------------------------------------------------------------
-    // CREATE JOB
+    // CREATE JOB & RECURRENT TASK QUICK-FILL ASSISTANT
     // ------------------------------------------------------------------------
-    function openNewJobDrawer() {
+    function openNewJobDrawer(preselectedEmployeeId = null) {
       if (!state.employees || state.employees.length === 0) {
         if (confirm("You haven't registered any staff members yet.\n\nWould you like to register your first team member in the Staff Directory now?")) {
           switchTab('staff');
@@ -5280,13 +5623,208 @@
         return;
       }
 
+      const form = document.getElementById('form-new-job');
+      if (form) form.reset();
+      resetRecurrentTaskUI();
+
       // Set default due date to today at 5:30 PM
       const now = new Date();
       now.setHours(17, 30, 0, 0);
       const isoLocal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
       document.getElementById('job-due-date').value = isoLocal;
 
+      if (preselectedEmployeeId) {
+        const empSelect = document.getElementById('job-employee-id');
+        if (empSelect) {
+          empSelect.value = preselectedEmployeeId;
+          onJobEmployeeSelected(preselectedEmployeeId);
+        }
+      }
+
       openModal('modal-new-job');
+    }
+
+    function openNewJobForStaff(empId) {
+      openNewJobDrawer(empId);
+    }
+
+    async function duplicateJobAsRecurrent(jobId) {
+      let job = state.jobs.find(j => j.id === jobId);
+      if (!job) {
+        const res = await apiRequest('/api/jobs');
+        if (res.success && res.jobs) {
+          state.jobs = res.jobs;
+          job = state.jobs.find(j => j.id === jobId);
+        }
+      }
+      if (!job) return;
+
+      openNewJobDrawer(job.employee_id);
+
+      setTimeout(() => {
+        document.getElementById('job-title').value = job.title || '';
+        document.getElementById('job-desc').value = job.description || '';
+        document.getElementById('job-priority').value = job.priority || 'medium';
+        document.getElementById('job-value').value = job.stated_value || 0;
+        document.getElementById('job-privacy-toggle').checked = job.include_value_on_wa !== false;
+
+        const badge = document.getElementById('recurrent-autofill-indicator');
+        const msg = document.getElementById('recurrent-autofill-msg');
+        if (badge && msg) {
+          msg.textContent = `Cloned from #${job.job_code} "${job.title}". Confirm deadline below and dispatch!`;
+          badge.style.display = 'flex';
+        }
+      }, 120);
+    }
+
+    function resetRecurrentTaskUI() {
+      state.currentEmployeeRecurrentData = null;
+      const panel = document.getElementById('recurrent-task-panel');
+      const badge = document.getElementById('recurrent-autofill-indicator');
+      const select = document.getElementById('select-recurrent-task');
+      if (panel) panel.style.display = 'none';
+      if (badge) badge.style.display = 'none';
+      if (select) select.value = '';
+    }
+
+    function resetJobFormFields() {
+      document.getElementById('job-title').value = '';
+      document.getElementById('job-desc').value = '';
+      document.getElementById('job-priority').value = 'medium';
+      document.getElementById('job-value').value = 45000;
+      document.getElementById('job-privacy-toggle').checked = true;
+      const select = document.getElementById('select-recurrent-task');
+      const badge = document.getElementById('recurrent-autofill-indicator');
+      if (select) select.value = '';
+      if (badge) badge.style.display = 'none';
+    }
+
+    async function onJobEmployeeSelected(employeeId) {
+      const panel = document.getElementById('recurrent-task-panel');
+      const heading = document.getElementById('recurrent-panel-heading');
+      const select = document.getElementById('select-recurrent-task');
+      const chipsWrap = document.getElementById('recurrent-chips-container');
+      const badge = document.getElementById('recurrent-autofill-indicator');
+
+      if (!employeeId) {
+        resetRecurrentTaskUI();
+        return;
+      }
+
+      if (panel) panel.style.display = 'block';
+      if (badge) badge.style.display = 'none';
+      if (heading) heading.textContent = 'Loading previous & recurrent tasks...';
+      if (chipsWrap) chipsWrap.innerHTML = '';
+
+      const res = await apiRequest(`/api/employees/${employeeId}/previous-tasks`);
+      if (!res.success) {
+        if (heading) heading.textContent = 'Previous & Recurrent Tasks';
+        return;
+      }
+
+      state.currentEmployeeRecurrentData = res;
+      const emp = res.employee || {};
+      const recurrent = res.recurrentTasks || [];
+      const templates = res.roleTemplates || [];
+      const currency = res.currency || 'LKR';
+
+      if (recurrent.length > 0) {
+        heading.textContent = `${emp.fullName}'s Previous & Recurrent Tasks (${recurrent.length} unique · ${res.totalPreviousJobs} total)`;
+        select.innerHTML = `<option value="">-- ⚡ Select from ${recurrent.length} previous task(s) to auto-fill --</option>` +
+          recurrent.map((t, idx) =>
+            `<option value="rec_${idx}">🔁 ${t.title} (${formatLKR(t.statedValue, currency)} · ${t.frequency}x assigned · ${t.priority.toUpperCase()})</option>`
+          ).join('') +
+          (templates.length > 0 ? `<optgroup label="Suggested Role Templates (${emp.roleTitle || 'Staff'})">` +
+            templates.map((tpl, idx) => `<option value="tpl_${idx}">💡 ${tpl.title} (${formatLKR(tpl.statedValue, currency)})</option>`).join('') +
+            `</optgroup>` : '');
+
+        // Render top 4 quick-select chips
+        const topRecurrent = recurrent.slice(0, 4);
+        chipsWrap.innerHTML = `<div style="width:100%; font-size:10.5px; color:var(--text-dim); margin-bottom:2px;">Quick 1-Click Recurrent Task Selection:</div>` +
+          topRecurrent.map((t, idx) => `
+            <button type="button" class="recurrent-task-chip" onclick="applyRecurrentTaskByIndex(${idx})">
+              <span>🔁</span>
+              <strong>${t.title}</strong>
+              <span class="chip-freq">${t.frequency}x</span>
+              <span class="chip-val">${formatLKR(t.statedValue, currency)}</span>
+            </button>
+          `).join('');
+      } else {
+        heading.textContent = `${emp.fullName} (${emp.roleTitle || 'Staff'}) — No Previous Tasks Yet`;
+        select.innerHTML = `<option value="">-- 💡 Pick a suggested recurrent template for ${emp.roleTitle || 'this role'} --</option>` +
+          templates.map((tpl, idx) =>
+            `<option value="tpl_${idx}">💡 ${tpl.title} (${formatLKR(tpl.statedValue, currency)} · ${tpl.priority.toUpperCase()})</option>`
+          ).join('');
+
+        chipsWrap.innerHTML = `<div style="width:100%; font-size:10.5px; color:var(--text-dim); margin-bottom:2px;">First assignment for ${emp.fullName}! Click a role template to auto-fill or type custom below:</div>` +
+          templates.map((tpl, idx) => `
+            <button type="button" class="recurrent-task-chip" onclick="applyRoleTemplateByIndex(${idx})">
+              <span>💡</span>
+              <strong>${tpl.title}</strong>
+              <span class="chip-val">${formatLKR(tpl.statedValue, currency)}</span>
+            </button>
+          `).join('');
+      }
+    }
+
+    function applySelectedRecurrentTask(val) {
+      if (!val) return;
+      if (val.startsWith('rec_')) {
+        const idx = parseInt(val.replace('rec_', ''), 10);
+        applyRecurrentTaskByIndex(idx);
+      } else if (val.startsWith('tpl_')) {
+        const idx = parseInt(val.replace('tpl_', ''), 10);
+        applyRoleTemplateByIndex(idx);
+      }
+    }
+
+    function applyRecurrentTaskByIndex(idx) {
+      if (!state.currentEmployeeRecurrentData || !state.currentEmployeeRecurrentData.recurrentTasks) return;
+      const t = state.currentEmployeeRecurrentData.recurrentTasks[idx];
+      if (!t) return;
+
+      document.getElementById('job-title').value = t.title || '';
+      document.getElementById('job-desc').value = t.description || '';
+      document.getElementById('job-priority').value = t.priority || 'medium';
+      document.getElementById('job-value').value = t.statedValue || 0;
+      document.getElementById('job-privacy-toggle').checked = t.includeValueOnWa !== false;
+
+      const select = document.getElementById('select-recurrent-task');
+      if (select) select.value = `rec_${idx}`;
+
+      const badge = document.getElementById('recurrent-autofill-indicator');
+      const msg = document.getElementById('recurrent-autofill-msg');
+      if (badge && msg) {
+        msg.textContent = `Auto-filled recurrent task "${t.title}" (${t.frequency}x previous). Adjust deadline or details if needed!`;
+        badge.style.display = 'flex';
+      }
+
+      const dueEl = document.getElementById('job-due-date');
+      if (dueEl) dueEl.focus();
+    }
+
+    function applyRoleTemplateByIndex(idx) {
+      if (!state.currentEmployeeRecurrentData || !state.currentEmployeeRecurrentData.roleTemplates) return;
+      const tpl = state.currentEmployeeRecurrentData.roleTemplates[idx];
+      if (!tpl) return;
+
+      document.getElementById('job-title').value = tpl.title || '';
+      document.getElementById('job-desc').value = tpl.description || '';
+      document.getElementById('job-priority').value = tpl.priority || 'medium';
+      document.getElementById('job-value').value = tpl.statedValue || 0;
+
+      const select = document.getElementById('select-recurrent-task');
+      if (select) select.value = `tpl_${idx}`;
+
+      const badge = document.getElementById('recurrent-autofill-indicator');
+      const msg = document.getElementById('recurrent-autofill-msg');
+      if (badge && msg) {
+        msg.textContent = `Auto-filled role template "${tpl.title}". Customize details below before dispatch!`;
+        badge.style.display = 'flex';
+      }
+
+      const dueEl = document.getElementById('job-due-date');
+      if (dueEl) dueEl.focus();
     }
 
     async function handleCreateJob(e) {
@@ -5312,10 +5850,11 @@
       if (res.success) {
         closeModal('modal-new-job');
         document.getElementById('form-new-job').reset();
+        resetRecurrentTaskUI();
 
         // Show WhatsApp Dispatch Preview Modal
         showWhatsAppModal(res.job.job_code, res.whatsAppPayload);
-        await loadDashboardKPIs();
+        await refreshAllViews();
       }
     }
 
@@ -5415,7 +5954,7 @@
       document.getElementById('status-modal-job-code').textContent = `#${job.job_code}`;
       document.getElementById('status-modal-title').textContent = job.title;
       document.getElementById('status-modal-staff').textContent = `Assigned to: ${job.employeeName || 'Staff'} (${job.employeePhone || 'N/A'})`;
-      
+
       const currChip = document.getElementById('status-modal-curr-chip');
       currChip.textContent = (job.status || 'pending').toUpperCase();
       let chipClass = 'chip-muted';
@@ -7002,5 +7541,5 @@
     window.addEventListener('DOMContentLoaded', initPlatform);
   </script>
 </body>
-</html>
 
+</html>
