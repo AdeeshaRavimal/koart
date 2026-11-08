@@ -76,7 +76,9 @@ function serveStatic(req, res, pathname) {
     const content = fs.readFileSync(filePath);
     res.writeHead(200, {
       'Content-Type': contentType,
-      'Cache-Control': ['.html', '.css', '.js'].includes(ext) ? 'no-cache' : 'public, max-age=86400',
+      'Cache-Control': ['.html', '.css', '.js'].includes(ext) ? 'no-cache, no-store, must-revalidate' : 'public, max-age=86400',
+      'Pragma': 'no-cache',
+      'Expires': '0',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'SAMEORIGIN',
       'Referrer-Policy': 'strict-origin-when-cross-origin'
@@ -123,13 +125,7 @@ function handleAppRequest(req, res) {
         }
       }
 
-      // Hot-reload routes module in development so route additions take effect instantly
-      try {
-        const routesModulePath = require.resolve('./server/routes');
-        delete require.cache[routesModulePath];
-      } catch (e) {}
-
-      let { handleApiRequest } = require('./server/routes');
+      // Routes are loaded once (required for the real-time SSE client registry to persist)
       handleApiRequest(req, res, parsedUrl, parsedBody);
     });
     return;

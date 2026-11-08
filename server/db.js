@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const EventEmitter = require('events');
 
 // Database location: set DATA_DIR (e.g. a Railway volume mounted at /data) for persistent hosting.
 // Falls back to the bundled server/data folder for local use.
@@ -72,8 +73,9 @@ function getInitialSeedData() {
   };
 }
 
-class PlatformDatabase {
+class PlatformDatabase extends EventEmitter {
   constructor() {
+    super();
     this.data = null;
     this.init();
   }
@@ -134,6 +136,10 @@ class PlatformDatabase {
 
   save() {
     try {
+      if (this.data) {
+        this.data._version = (Number(this.data._version) || 0) + 1;
+        this.data._lastModified = Date.now();
+      }
       const dir = path.dirname(DB_FILE);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -155,9 +161,23 @@ class PlatformDatabase {
         fs.writeFileSync(DB_FILE, serialized, 'utf8');
         try { fs.unlinkSync(tmpFile); } catch (e) {}
       }
+
+      // Real-time broadcast emission for all connected client views
+      this.emit('change', {
+        version: this.data ? this.data._version : 1,
+        lastModified: this.data ? this.data._lastModified : Date.now()
+      });
     } catch (err) {
       console.error('Critical database write error:', err);
     }
+  }
+
+  getVersion() {
+    return (this.data && this.data._version) || 1;
+  }
+
+  getLastModified() {
+    return (this.data && this.data._lastModified) || Date.now();
   }
 
   persist() {

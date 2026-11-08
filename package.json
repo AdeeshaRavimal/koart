@@ -21,6 +21,13 @@
   ],
   "author": "KOart Solutions — Digital Engineering Practice",
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "bin": "launcher.js",
+  "pkg": {
+    "scripts": ["server.js", "server/*.js"],
+    "assets": ["public/**/*"],
+    "targets": ["node20-win-x64"],
+    "outputPath": "dist"
+  }
 }
 

@@ -115,6 +115,9 @@ function clearAuthFailures(ip) {
 function jsonResponse(res, statusCode, data, extraHeaders = {}) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-company-id, x-user-id',
@@ -135,6 +138,47 @@ function errorResponse(res, statusCode, message, details = null) {
   });
 }
 
+// ============================================================================
+// REAL-TIME BROADCAST ENGINE (Server-Sent Events & Version Tracker)
+// ============================================================================
+const sseClients = new Set();
+
+function broadcastRealtimeChange(payload = {}) {
+  const version = typeof db.getVersion === 'function' ? db.getVersion() : ((db.data && db.data._version) || 1);
+  const data = JSON.stringify({
+    type: 'CHANGE',
+    version,
+    timestamp: Date.now(),
+    ...payload
+  });
+  const msg = `data: ${data}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(msg);
+    } catch (e) {
+      sseClients.delete(client);
+    }
+  }
+}
+
+// Subscribe to database mutation events
+if (typeof db.on === 'function') {
+  db.on('change', (info) => {
+    broadcastRealtimeChange(info);
+  });
+}
+
+// Keep-alive ping every 20 seconds to prevent reverse proxy/firewall disconnects
+setInterval(() => {
+  for (const client of sseClients) {
+    try {
+      client.write(': ping\n\n');
+    } catch (e) {
+      sseClients.delete(client);
+    }
+  }
+}, 20000).unref();
+
 /**
  * Handle incoming API requests
  */
@@ -142,6 +186,35 @@ async function handleApiRequest(req, res, url, body) {
   const method = req.method.toUpperCase();
   const pathname = url.pathname;
   const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1').split(',')[0].trim();
+
+  // 0. Real-Time Data Stream (Server-Sent Events for multi-client instant synchronization)
+  if (pathname === '/api/realtime/stream' || pathname === '/api/events' || pathname === '/api/stream') {
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-company-id, x-user-id',
+      'X-Accel-Buffering': 'no'
+    });
+    const ver = typeof db.getVersion === 'function' ? db.getVersion() : 1;
+    res.write(`: connected\ndata: ${JSON.stringify({ type: 'CONNECTED', version: ver, timestamp: Date.now() })}\n\n`);
+    sseClients.add(res);
+
+    req.on('close', () => {
+      sseClients.delete(res);
+    });
+    return;
+  }
+
+  // 0b. Real-Time Version Heartbeat (Super lightweight ~40 bytes polling endpoint)
+  if (pathname === '/api/realtime/version' || pathname === '/api/sync/version') {
+    return jsonResponse(res, 200, {
+      success: true,
+      version: typeof db.getVersion === 'function' ? db.getVersion() : 1,
+      lastModified: typeof db.getLastModified === 'function' ? db.getLastModified() : Date.now()
+    });
+  }
 
   // 1. Verify Signed Bearer Token (or seamless local upgrade from active localhost session)
   const authHeader = req.headers['authorization'] || '';
