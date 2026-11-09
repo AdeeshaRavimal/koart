@@ -64,5 +64,12 @@ if /i "%SYNC_AWS%"=="Y" (
 )
 
 echo.
+set /p BUILD_DESKTOP="Would you also like to rebuild the Windows Desktop EXE for v%NEW_VER% now? (Y/N): "
+if /i "%BUILD_DESKTOP%"=="Y" (
+  call build-exe.bat
+)
+
+echo.
 echo Version update completed successfully.
 pause
+

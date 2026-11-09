@@ -5,8 +5,48 @@
 const { app, BrowserWindow, dialog, Menu } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+const pkg = require('../package.json');
 
 const TRIAL_DAYS = 7;
+
+function isNewerVersion(remote, local) {
+  const r = (remote || '').split('.').map(Number);
+  const l = (local || '').split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((r[i] || 0) > (l[i] || 0)) return true;
+    if ((r[i] || 0) < (l[i] || 0)) return false;
+  }
+  return false;
+}
+
+function checkForRemoteUpdates(win) {
+  try {
+    const options = {
+      hostname: 'raw.githubusercontent.com',
+      path: '/AdeeshaRavimal/koart/main/package.json',
+      headers: { 'User-Agent': 'KOart-Desktop-App' }
+    };
+    https.get(options, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const remotePkg = JSON.parse(data);
+          if (remotePkg && remotePkg.version && isNewerVersion(remotePkg.version, pkg.version)) {
+            win.webContents.executeJavaScript(`
+              setTimeout(() => {
+                if (typeof showToast === 'function') {
+                  showToast('🚀 Version v${remotePkg.version} is available on GitHub! Update ready.');
+                }
+              }, 3000);
+            `);
+          }
+        } catch (e) {}
+      });
+    }).on('error', () => {});
+  } catch (e) {}
+}
 
 function checkTrial(dataDir) {
   const licFile = path.join(dataDir, '.trial');
@@ -44,13 +84,16 @@ function startApp() {
     const win = new BrowserWindow({
       width: 1440,
       height: 900,
-      title: `KOart Platform — Trial: ${daysLeft} day(s) left`,
+      title: `KOart Platform v${pkg.version || '1.1.0'} — Trial: ${daysLeft} day(s) left`,
       autoHideMenuBar: true,
       webPreferences: { contextIsolation: true, nodeIntegration: false }
     });
     Menu.setApplicationMenu(null);
     win.on('page-title-updated', (e) => e.preventDefault());
     win.loadURL(`http://127.0.0.1:${port}`);
+    win.webContents.on('did-finish-load', () => {
+      checkForRemoteUpdates(win);
+    });
   });
   app.on('before-quit', () => { try { server.close(); } catch (e) {} });
 }
