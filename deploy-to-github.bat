@@ -3,43 +3,42 @@ title Push KOart Platform to GitHub
 color 0A
 cd /d "%~dp0"
 echo ========================================================================
-echo   KOart Solutions - Push Operational Platform to GitHub (for Render)
+echo   KOart Solutions - Push Operational Platform to GitHub
 echo ========================================================================
 echo.
-echo Target Repository: https://github.com/inkoartcontact-del/kooaert
+echo Target Repository: https://github.com/AdeeshaRavimal/koart.git
 echo.
 
-if not exist .git (
-  echo Initializing local Git repository...
-  git init
-  git branch -M main
-  git remote add origin https://github.com/inkoartcontact-del/kooaert.git
+git remote get-url adeesha >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+  git remote add adeesha https://github.com/AdeeshaRavimal/koart.git
 ) else (
-  echo Updating Git remote origin...
-  git remote set-url origin https://github.com/inkoartcontact-del/kooaert.git
+  git remote set-url adeesha https://github.com/AdeeshaRavimal/koart.git
 )
 
-echo.
-echo Staging and committing files...
+echo Staging all changes...
 git add .
-git commit -m "Deploy KOart Multi-Tenant Operational Platform to Render"
+
+set /p MSG="Enter commit message (or press ENTER for default): "
+if "%MSG%"=="" set MSG=Update platform codebase and configuration
+
+echo Committing...
+git commit -m "%MSG%"
 
 echo.
-echo Pushing to GitHub (main branch)...
-git push -u origin main
+echo Pushing to GitHub (adeesha main)...
+git push -u adeesha main
 
-echo.
 if %ERRORLEVEL% equ 0 (
+  echo.
   echo ========================================================================
   echo   SUCCESS: Code pushed to https://github.com/AdeeshaRavimal/koart!
   echo ========================================================================
 ) else (
   echo.
-  echo [Notice] If the push was rejected because the remote has commits,
-  echo trying force push...
-  git push -u origin main --force
+  echo [Notice] Standard push failed, checking with force push...
+  git push -u adeesha main --force
 )
 
 echo.
 pause
-
