@@ -279,15 +279,98 @@
     }
 
     // ------------------------------------------------------------------------
+    // TOAST NOTIFICATION & REAL-TIME SYNC ENGINE
+    // ------------------------------------------------------------------------
+    function showToast(msg, isError = false) {
+      let toastContainer = document.getElementById('koart-toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'koart-toast-container';
+        toastContainer.style.cssText = 'position:fixed; bottom:24px; right:24px; z-index:999999; display:flex; flex-direction:column; gap:8px; pointer-events:none;';
+        document.body.appendChild(toastContainer);
+      }
+      const toast = document.createElement('div');
+      toast.style.cssText = [
+        'pointer-events:auto',
+        'padding:10px 16px',
+        'border-radius:8px',
+        'font-size:13px',
+        'font-weight:600',
+        'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif',
+        'color:#fff',
+        `background:${isError ? 'rgba(239, 68, 68, 0.95)' : 'rgba(16, 185, 129, 0.95)'}`,
+        'box-shadow:0 4px 18px rgba(0,0,0,0.35)',
+        'border:1px solid rgba(255,255,255,0.2)',
+        'display:flex',
+        'align-items:center',
+        'gap:8px',
+        'transition:opacity 0.3s ease, transform 0.3s ease'
+      ].join(';');
+      toast.innerHTML = `<span>${isError ? '⚠️' : '✓'}</span><span>${msg}</span>`;
+      toastContainer.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    let _realtimeInitialized = false;
+    let _lastKnownDataVersion = null;
+    function initRealtimeSync() {
+      if (_realtimeInitialized) return;
+      _realtimeInitialized = true;
+
+      try {
+        const es = new EventSource('/api/realtime/stream');
+        window._realtimeEventSource = es;
+        es.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            if (data && data.version) _lastKnownDataVersion = data.version;
+            if (data && data.type === 'CHANGE') {
+              if (Date.now() - (window._lastLocalMutationTime || 0) < 600) return;
+              refreshAllViews();
+            }
+          } catch (err) {}
+        };
+      } catch (err) {}
+
+      setInterval(async () => {
+        if (document.visibilityState !== 'visible' || !state.user) return;
+        try {
+          const res = await apiRequest('/api/realtime/version');
+          if (res && res.success && res.version) {
+            if (_lastKnownDataVersion !== null && res.version > _lastKnownDataVersion) {
+              _lastKnownDataVersion = res.version;
+              if (Date.now() - (window._lastLocalMutationTime || 0) > 600) {
+                await refreshAllViews();
+              }
+            } else {
+              _lastKnownDataVersion = res.version;
+            }
+          }
+        } catch (e) {}
+      }, 3500);
+    }
+
+    // ------------------------------------------------------------------------
     // API CALLS (With Signed Bearer Token & Multi-Tenancy Context)
     // ------------------------------------------------------------------------
     async function apiRequest(endpoint, method = 'GET', body = null) {
-      const headers = { 'Content-Type': 'application/json' };
+      const headers = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      };
       if (!state.authToken) {
         try { state.authToken = localStorage.getItem('koart_auth_token') || null; } catch (e) {}
       }
       if (state.authToken) {
         headers['Authorization'] = `Bearer ${state.authToken}`;
+      }
+      if (!state.activeCompanyId) {
+        try { state.activeCompanyId = localStorage.getItem('koart_active_company_id') || null; } catch (e) {}
       }
       if (state.activeCompanyId) {
         headers['x-company-id'] = state.activeCompanyId;
@@ -296,7 +379,7 @@
         headers['x-user-id'] = state.user.id;
       }
 
-      const opts = { method, headers };
+      const opts = { method, headers, cache: 'no-store' };
       if (body) opts.body = JSON.stringify(body);
 
       try {
@@ -364,7 +447,16 @@
       const compRes = await apiRequest('/api/companies');
       if (compRes.success) {
         state.companies = compRes.companies || [];
-        state.activeCompanyId = compRes.activeCompanyId || (state.companies[0] ? state.companies[0].id : null);
+        let savedCompId = null;
+        try { savedCompId = localStorage.getItem('koart_active_company_id'); } catch (e) {}
+        if (savedCompId && state.companies.some(c => c.id === savedCompId)) {
+          state.activeCompanyId = savedCompId;
+        } else {
+          state.activeCompanyId = compRes.activeCompanyId || (state.companies[0] ? state.companies[0].id : null);
+        }
+        if (state.activeCompanyId) {
+          try { localStorage.setItem('koart_active_company_id', state.activeCompanyId); } catch (e) {}
+        }
 
         const activeComp = state.companies.find(c => c.id === state.activeCompanyId) || state.companies[0];
         if (activeComp) {
@@ -405,6 +497,8 @@
         state.jobs = [];
         populateAllStaffDropdowns();
       }
+
+      initRealtimeSync();
     }
 
     function renderCompanyDropdown(companies) {
@@ -422,6 +516,7 @@
 
     async function selectWorkspace(companyId) {
       state.activeCompanyId = companyId;
+      try { localStorage.setItem('koart_active_company_id', companyId); } catch (e) {}
       toggleCompanyDropdown();
       reportState.employeeId = '';
       if (document.getElementById('filter-job-employee')) document.getElementById('filter-job-employee').value = '';
@@ -660,7 +755,7 @@
     function renderJobRow(job, isMaster = false) {
       let statusChip = 'chip-muted';
       if (job.status === 'completed') statusChip = 'chip-green';
-      else if (job.status === 'in_progress') statusChip = 'chip-blue';
+      else if (job.status === 'in_progress' || job.status === 'assigned') statusChip = 'chip-blue';
       else if (job.status === 'extended') statusChip = 'chip-amber';
       else if (job.status === 'stopped') statusChip = 'chip-red';
 
@@ -1077,8 +1172,8 @@
     // 1-CLICK WHATSAPP FOLLOW-UP
     // ------------------------------------------------------------------------
     async function triggerFollowup(jobId) {
-      const note = prompt('Enter follow-up note for WhatsApp reminder (or press OK for default):', 'Kindly update management on completion progress.');
-      if (note === null) return; // Cancelled
+      // window.prompt() is unavailable in the desktop app; use the default reminder note
+      const note = 'Kindly update management on completion progress.';
 
       const res = await apiRequest(`/api/jobs/${jobId}/followup`, 'POST', {
         handlerNote: note
@@ -1107,6 +1202,25 @@
       if (repTab && repTab.classList.contains('active')) {
         await loadReportsView();
       }
+      const staffTab = document.getElementById('view-staff');
+      if (staffTab && staffTab.classList.contains('active')) {
+        const crossSubview = document.getElementById('staff-subview-cross');
+        if (crossSubview && crossSubview.style.display !== 'none') {
+          await loadCrossCompanyStaffReport();
+        } else {
+          await loadEmployeesList();
+          loadStaffTable();
+        }
+      }
+      const budgetTab = document.getElementById('view-budget');
+      if (budgetTab && budgetTab.classList.contains('active')) {
+        if (typeof loadDedicatedBudgetTab === 'function') {
+          await loadDedicatedBudgetTab(true);
+        }
+      }
+      if (typeof loadAllCompaniesNotifications === 'function') {
+        loadAllCompaniesNotifications();
+      }
     }
 
     // ------------------------------------------------------------------------
@@ -1114,40 +1228,34 @@
     // ------------------------------------------------------------------------
     async function changeJobStatus(jobId, newStatus, note = '') {
       let job = state.jobs.find(x => x.id === jobId);
-      const activeComp = state.companies.find(c => c.id === state.activeCompanyId);
-      const curr = (activeComp && activeComp.currency) || 'LKR';
-
       let statedValue = job ? Number(job.stated_value || 0) : undefined;
       let realizedValue = undefined;
 
-      if (job) {
-        const priceInput = prompt(
-          `Changing status of #${job.job_code} ("${job.title}") to ${newStatus.toUpperCase()}.\n\n` +
-          `Confirm or update Job Cost (${curr}):\n` +
-          `(Press OK to keep ${statedValue}, or type new job price)`,
-          String(statedValue)
-        );
-        if (priceInput === null) {
-          // User cancelled — restore original dropdown selection
-          await loadJobsTable(true);
-          await loadDashboardKPIs();
-          return;
-        }
-        const parsedPrice = parseFloat(priceInput.replace(/,/g, '').trim());
-        if (!isNaN(parsedPrice) && parsedPrice >= 0) {
-          statedValue = parsedPrice;
-          if (newStatus === 'completed') {
-            realizedValue = parsedPrice;
-          }
-        }
+      if (newStatus === 'completed' && statedValue !== undefined) {
+        realizedValue = statedValue;
+      } else if (newStatus === 'stopped') {
+        realizedValue = 0;
       }
+
+      // Immediately update the dropdown badge styling in the DOM (0ms instant visual feedback)
+      let chipClass = 'chip-muted';
+      if (newStatus === 'completed') chipClass = 'chip-green';
+      else if (newStatus === 'in_progress' || newStatus === 'assigned') chipClass = 'chip-blue';
+      else if (newStatus === 'extended') chipClass = 'chip-amber';
+      else if (newStatus === 'stopped') chipClass = 'chip-red';
+      document.querySelectorAll(`select[onchange*="${jobId}"]`).forEach(sel => {
+        sel.className = `status-dropdown ${chipClass}`;
+        sel.value = newStatus;
+      });
 
       const payload = {
         status: newStatus,
-        handlerNote: note
+        handlerNote: note || `Status transitioned to ${newStatus}`
       };
       if (statedValue !== undefined) payload.statedValue = statedValue;
       if (realizedValue !== undefined) payload.realizedValue = realizedValue;
+
+      window._lastLocalMutationTime = Date.now();
 
       let res = await apiRequest(`/api/jobs/${jobId}/status`, 'PATCH', payload);
 
@@ -1163,14 +1271,12 @@
           if (res.job && res.job.stated_value !== undefined) j.stated_value = res.job.stated_value;
           if (res.job && res.job.realized_value !== undefined) j.realized_value = res.job.realized_value;
         }
+        showToast(`✓ #${(job && job.job_code) || 'Task'} status saved: ${newStatus.replace('_', ' ').toUpperCase()}`);
         await refreshAllViews();
       } else {
-        if (res.error && res.error.includes('not found')) {
-          alert('Notice: The backend server is running an older process in memory.\n\nPlease close the terminal window running "node server.js" and double-click "start-platform.bat" to reload the latest status routes.');
-        } else {
-          alert('Failed to update task status: ' + (res.error || 'Unknown error'));
-        }
+        showToast('Failed to update task status: ' + (res.error || 'Unknown error'), true);
         await loadJobsTable();
+        await loadDashboardKPIs();
       }
     }
 
@@ -1298,18 +1404,10 @@
 
       if (res.success) {
         closeModal('modal-change-status');
+        showToast(`✓ Task #${res.job.job_code} updated to ${newStatus.replace('_', ' ').toUpperCase()}`);
         await refreshAllViews();
-        const activeComp = state.companies.find(c => c.id === state.activeCompanyId);
-        const curr = (activeComp && activeComp.currency) || 'LKR';
-        if (newStatus === 'completed') {
-          alert(`✓ Task #${res.job.job_code} marked completed!\nJob Cost: ${formatLKR(res.job.stated_value, curr)}\nRealized Revenue: ${formatLKR(res.job.realized_value, curr)}`);
-        }
       } else {
-        if (res.error && res.error.includes('not found')) {
-          alert('Notice: The backend server is running an older process in memory.\n\nPlease close the terminal window running "node server.js" and double-click "start-platform.bat" to reload the latest status routes.');
-        } else {
-          alert('Failed to update task status: ' + (res.error || 'Unknown error'));
-        }
+        showToast('Failed to update task status: ' + (res.error || 'Unknown error'), true);
       }
     }
 
@@ -1431,7 +1529,7 @@
         closeModal('modal-overdue-pathways');
         const activeComp = state.companies.find(c => c.id === state.activeCompanyId);
         const curr = (activeComp && activeComp.currency) || 'LKR';
-        alert(`✓ Task #${res.job.job_code} marked completed.\nFinal Job Cost: ${formatLKR(res.job.stated_value, curr)}\nRealized Value: ${formatLKR(res.job.realized_value, curr)}`);
+        showToast(`✓ Task #${res.job.job_code} marked completed (Realized: ${formatLKR(res.job.realized_value, curr)})`);
         await refreshAllViews();
       }
     }
