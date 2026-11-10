@@ -26,9 +26,8 @@ function isNewerVersion(remote, local) {
 function fetchRemotePackage() {
   return new Promise((resolve) => {
     const urls = [
-      'https://raw.githubusercontent.com/AdeeshaRavimal/koart/main/package.json',
-      'http://3.26.33.44/api/updates/check',
-      'http://3.26.33.44/updates/version.json'
+      'https://raw.githubusercontent.com/AdeeshaRavimal/koart/main/updates/version.json',
+      'https://raw.githubusercontent.com/AdeeshaRavimal/koart/main/package.json'
     ];
 
     function tryFetch(idx) {
@@ -122,8 +121,8 @@ ipcMain.handle('check-update', async () => {
     currentVersion: pkg.version,
     newVersion: remote.version,
     releaseNotes: remote.description || 'Instant performance enhancements, bug fixes, and security updates.',
-    asarUrl: `https://github.com/AdeeshaRavimal/koart/releases/download/v${remote.version}/app.asar`,
-    fallbackAsarUrl: 'http://3.26.33.44/updates/app.asar'
+    asarUrl: `https://raw.githubusercontent.com/AdeeshaRavimal/koart/main/updates/app.asar`,
+    fallbackAsarUrl: `https://github.com/AdeeshaRavimal/koart/releases/download/v${remote.version}/app.asar`
   };
 });
 
@@ -134,8 +133,8 @@ ipcMain.handle('apply-update', async (event, updateInfo) => {
 
   const tempAsarPath = path.join(updateCacheDir, 'app.asar.new');
   const targetAsarPath = path.join(process.resourcesPath || '', 'app.asar');
-  const asarUrl = (updateInfo && updateInfo.asarUrl) || `https://github.com/AdeeshaRavimal/koart/releases/download/v${updateInfo.newVersion}/app.asar`;
-  const fallbackUrl = (updateInfo && updateInfo.fallbackAsarUrl) || 'http://3.26.33.44/updates/app.asar';
+  const asarUrl = (updateInfo && updateInfo.asarUrl) || `https://raw.githubusercontent.com/AdeeshaRavimal/koart/main/updates/app.asar`;
+  const fallbackUrl = (updateInfo && updateInfo.fallbackAsarUrl) || `https://github.com/AdeeshaRavimal/koart/releases/download/v${updateInfo.newVersion}/app.asar`;
 
   const sendProgress = (pct) => {
     if (win && !win.isDestroyed()) {
@@ -211,8 +210,8 @@ function checkForRemoteUpdates(win) {
             currentVersion: pkg.version,
             newVersion: remote.version,
             releaseNotes: remote.description || 'General performance, reliability, and security updates.',
-            asarUrl: `https://github.com/AdeeshaRavimal/koart/releases/download/v${remote.version}/app.asar`,
-            fallbackAsarUrl: 'http://3.26.33.44/updates/app.asar'
+            asarUrl: `https://raw.githubusercontent.com/AdeeshaRavimal/koart/main/updates/app.asar`,
+            fallbackAsarUrl: `https://github.com/AdeeshaRavimal/koart/releases/download/v${remote.version}/app.asar`
           });
         }
       }
