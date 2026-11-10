@@ -172,6 +172,20 @@ ipcMain.handle('apply-update', async (event, updateInfo) => {
       fs.copyFileSync(tempAsarPath, path.join(engineDir, 'app.asar'));
     } catch (e) {}
 
+    const exePath = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+
+    // Portable EXE mode: native relaunch of the portable binary
+    if (process.env.PORTABLE_EXECUTABLE_FILE) {
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('update-download-ready', { message: 'Update applied! Restarting...' });
+      }
+      app.relaunch({ execPath: process.env.PORTABLE_EXECUTABLE_FILE });
+      setTimeout(() => {
+        app.exit(0);
+      }, 500);
+      return { success: true };
+    }
+
     // Development mode simulation
     if (!app.isPackaged || !fs.existsSync(targetAsarPath)) {
       if (win && !win.isDestroyed()) {
@@ -180,18 +194,21 @@ ipcMain.handle('apply-update', async (event, updateInfo) => {
       return { success: true, simulated: true };
     }
 
-    // Production Hot Swap via detached helper script (avoids Windows file lock)
+    // Unpacked directory mode: Hot Swap via detached helper script (avoids Windows file lock)
     const updaterBat = path.join(updateCacheDir, 'apply-update.bat');
-    const exePath = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
 
     const batContent = [
       '@echo off',
       'timeout /t 1 /nobreak >nul',
+      'set count=0',
       ':loop',
       `copy /y "${tempAsarPath}" "${targetAsarPath}" >nul 2>&1`,
       'if errorlevel 1 (',
-      '  timeout /t 1 /nobreak >nul',
-      '  goto loop',
+      '  set /a count+=1',
+      '  if %count% lss 6 (',
+      '    timeout /t 1 /nobreak >nul',
+      '    goto loop',
+      '  )',
       ')',
       `del "${tempAsarPath}" >nul 2>&1`,
       `start "" "${exePath}"`,
