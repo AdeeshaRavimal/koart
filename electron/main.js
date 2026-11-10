@@ -23,6 +23,17 @@ function isNewerVersion(remote, local) {
   return false;
 }
 
+function getActiveVersion() {
+  try {
+    const enginePkg = path.join(app.getPath('userData'), 'engine', 'app.asar', 'package.json');
+    if (fs.existsSync(enginePkg)) {
+      const p = JSON.parse(fs.readFileSync(enginePkg, 'utf8'));
+      if (p && p.version) return p.version;
+    }
+  } catch (e) {}
+  return pkg.version || '1.2.0';
+}
+
 function fetchRemotePackage() {
   return new Promise((resolve) => {
     const urls = [
@@ -114,11 +125,12 @@ ipcMain.handle('check-update', async () => {
   if (!remote || !remote.version) {
     return { success: false, error: 'Could not connect to update servers.' };
   }
-  const isAvailable = isNewerVersion(remote.version, pkg.version);
+  const currentVer = getActiveVersion();
+  const isAvailable = isNewerVersion(remote.version, currentVer);
   return {
     success: true,
     updateAvailable: isAvailable,
-    currentVersion: pkg.version,
+    currentVersion: currentVer,
     newVersion: remote.version,
     releaseNotes: remote.description || 'Instant performance enhancements, bug fixes, and security updates.',
     asarUrl: `https://raw.githubusercontent.com/AdeeshaRavimal/koart/main/updates/app.asar`,
@@ -153,6 +165,13 @@ ipcMain.handle('apply-update', async (event, updateInfo) => {
 
     sendProgress(100);
 
+    // Save persistent engine copy in userData (survives portable EXE temp extracts)
+    const engineDir = path.join(app.getPath('userData'), 'engine');
+    fs.mkdirSync(engineDir, { recursive: true });
+    try {
+      fs.copyFileSync(tempAsarPath, path.join(engineDir, 'app.asar'));
+    } catch (e) {}
+
     // Development mode simulation
     if (!app.isPackaged || !fs.existsSync(targetAsarPath)) {
       if (win && !win.isDestroyed()) {
@@ -163,7 +182,7 @@ ipcMain.handle('apply-update', async (event, updateInfo) => {
 
     // Production Hot Swap via detached helper script (avoids Windows file lock)
     const updaterBat = path.join(updateCacheDir, 'apply-update.bat');
-    const exePath = process.execPath;
+    const exePath = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
 
     const batContent = [
       '@echo off',
@@ -203,11 +222,12 @@ ipcMain.handle('apply-update', async (event, updateInfo) => {
 function checkForRemoteUpdates(win) {
   setTimeout(async () => {
     try {
+      const currentVer = getActiveVersion();
       const remote = await fetchRemotePackage();
-      if (remote && remote.version && isNewerVersion(remote.version, pkg.version)) {
+      if (remote && remote.version && isNewerVersion(remote.version, currentVer)) {
         if (win && !win.isDestroyed()) {
           win.webContents.send('update-available-alert', {
-            currentVersion: pkg.version,
+            currentVersion: currentVer,
             newVersion: remote.version,
             releaseNotes: remote.description || 'General performance, reliability, and security updates.',
             asarUrl: `https://raw.githubusercontent.com/AdeeshaRavimal/koart/main/updates/app.asar`,
@@ -248,14 +268,25 @@ function startApp() {
   process.env.DATA_DIR = dataDir;
   process.env.NODE_ENV = 'production';
 
-  const { createServer } = require('../server');
+  const engineAsar = path.join(app.getPath('userData'), 'engine', 'app.asar');
+  let createServer;
+  if (fs.existsSync(engineAsar)) {
+    try {
+      createServer = require(path.join(engineAsar, 'server.js')).createServer;
+    } catch (e) {
+      createServer = require('../server').createServer;
+    }
+  } else {
+    createServer = require('../server').createServer;
+  }
+
   const server = createServer(38417); // fixed port keeps the browser login session between launches
   server.on('listening', () => {
     const port = server.address().port;
     const win = new BrowserWindow({
       width: 1440,
       height: 900,
-      title: `KOart Platform v${pkg.version || '1.1.0'} — Trial: ${daysLeft} day(s) left`,
+      title: `KOart Platform v${getActiveVersion()} — Trial: ${daysLeft} day(s) left`,
       autoHideMenuBar: true,
       webPreferences: {
         contextIsolation: true,

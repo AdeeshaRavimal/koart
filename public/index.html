@@ -2314,16 +2314,17 @@
   </div>
 
   <!-- =========================================================================
-       IN-APP PROFESSIONAL HOT-UPDATER MODAL
+       IN-APP PROFESSIONAL HOT-UPDATER MODAL (Pop-Up Overlay)
        ========================================================================= -->
-  <div class="modal" id="modal-hot-update">
-    <div class="modal-content" style="max-width: 480px; text-align: center; border-radius: var(--radius-lg); padding: 30px 26px; box-shadow: 0 20px 45px rgba(0,0,0,0.5);">
+  <div class="modal-overlay" id="modal-hot-update" style="z-index: 999999;">
+    <div class="modal-box" style="max-width: 480px; text-align: center; border-radius: var(--radius-lg); padding: 28px 24px; position: relative;">
+      <button type="button" class="btn-close-modal" onclick="closeModal('modal-hot-update')" style="position: absolute; top: 16px; right: 18px;" title="Dismiss">✕</button>
       <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 26px;">
         🚀
       </div>
       <h3 style="font-size: 19px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.3px;">Software Update Ready</h3>
       <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px;">
-        A new version <strong id="hot-update-new-ver" style="color: #60a5fa;">v1.2.0</strong> is ready to install (current: <span id="hot-update-curr-ver" style="font-family: var(--font-mono);">v1.1.0</span>).
+        A new version <strong id="hot-update-new-ver" style="color: #60a5fa;"></strong> is ready to install (current: <span id="hot-update-curr-ver" style="font-family: var(--font-mono);"></span>).
       </p>
 
       <!-- Release Notes Box -->

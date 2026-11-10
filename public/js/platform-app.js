@@ -4717,6 +4717,10 @@
     function showUpdateBadge(newVer) {
       const btn = document.getElementById('btn-update-available');
       if (btn) {
+        if (!newVer) {
+          btn.style.display = 'none';
+          return;
+        }
         btn.style.display = 'inline-flex';
         btn.title = `Click to install version v${newVer}`;
         btn.innerHTML = `<span>⚡ Update to v${newVer}</span>`;
@@ -4724,7 +4728,11 @@
     }
 
     function openHotUpdateModal(info) {
-      const data = info || _updateInfoStash || {};
+      const data = info || _updateInfoStash;
+      if (!data || !data.newVersion) {
+        showToast('✓ You are already running the latest version (v1.2.0).');
+        return;
+      }
       const newVerEl = document.getElementById('hot-update-new-ver');
       const currVerEl = document.getElementById('hot-update-curr-ver');
       const notesEl = document.getElementById('hot-update-notes');
@@ -4755,6 +4763,12 @@
     async function triggerInAppUpdate() {
       if (!window.desktopUpdater) {
         showToast('In-App Updater is only available in the KOart Desktop App.', true);
+        return;
+      }
+
+      if (!_updateInfoStash || !_updateInfoStash.newVersion) {
+        showToast('✓ You are running the latest version. No update required.');
+        closeModal('modal-hot-update');
         return;
       }
 
