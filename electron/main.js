@@ -43,7 +43,7 @@ function fetchRemotePackage() {
 
     function tryFetch(idx) {
       if (idx >= urls.length) return resolve(null);
-      const targetUrl = urls[idx];
+      const targetUrl = urls[idx] + '?t=' + Date.now();
       try {
         const parsed = new URL(targetUrl);
         const client = parsed.protocol === 'https:' ? https : http;
