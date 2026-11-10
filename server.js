@@ -105,8 +105,8 @@ function handleAppRequest(req, res) {
   const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = parsedUrl.pathname;
 
-  // API Routes
-  if (pathname.startsWith('/api/')) {
+  // API Routes & In-App Hot-Updates
+  if (pathname.startsWith('/api/') || pathname.startsWith('/updates/')) {
     let bodyData = '';
     req.on('data', chunk => {
       bodyData += chunk;

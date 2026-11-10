@@ -27,6 +27,7 @@ function fetchRemotePackage() {
   return new Promise((resolve) => {
     const urls = [
       'https://raw.githubusercontent.com/AdeeshaRavimal/koart/main/package.json',
+      'http://3.26.33.44/api/updates/check',
       'http://3.26.33.44/updates/version.json'
     ];
 

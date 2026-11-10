@@ -226,7 +226,7 @@ async function handleApiRequest(req, res, url, body) {
     });
   }
 
-  if (pathname === '/updates/app.asar') {
+  if (pathname === '/updates/app.asar' || pathname === '/api/updates/app.asar') {
     const asarFile = path.resolve(__dirname, '../updates/app.asar');
     const fallbackAsar = path.resolve(__dirname, '../dist-electron/win-unpacked/resources/app.asar');
     const targetFile = fs.existsSync(asarFile) ? asarFile : (fs.existsSync(fallbackAsar) ? fallbackAsar : null);

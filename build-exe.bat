@@ -24,9 +24,11 @@ if %ERRORLEVEL% neq 0 (
 echo.
 echo [2/4] Generating In-App Hot-Updater payload (updates\app.asar)...
 if not exist "updates" mkdir "updates"
+if not exist "public\updates" mkdir "public\updates"
 if exist "dist-electron\win-unpacked\resources\app.asar" (
   copy /y "dist-electron\win-unpacked\resources\app.asar" "updates\app.asar" >nul
-  node -e "const p=require('./package.json'); const fs=require('fs'); fs.writeFileSync('updates/version.json', JSON.stringify({ version: p.version, description: 'KOart Platform v' + p.version + ' hot-update payload' }, null, 2));"
+  copy /y "dist-electron\win-unpacked\resources\app.asar" "public\updates\app.asar" >nul
+  node -e "const p=require('./package.json'); const fs=require('fs'); const d=JSON.stringify({ version: p.version, description: 'KOart Platform v' + p.version + ' hot-update payload' }, null, 2); fs.writeFileSync('updates/version.json', d); fs.writeFileSync('public/updates/version.json', d);"
   echo   Successfully generated updates\app.asar and updates\version.json
 )
 
