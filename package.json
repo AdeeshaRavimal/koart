@@ -39,8 +39,14 @@
             "public/**/*"
         ],
         "win": {
-            "target": "dir",
+            "target": [
+                "portable",
+                "dir"
+            ],
             "signAndEditExecutable": false
+        },
+        "portable": {
+            "artifactName": "KOart-Platform-Portable.exe"
         }
     },
     "devDependencies": {

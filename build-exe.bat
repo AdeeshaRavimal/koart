@@ -11,8 +11,8 @@ echo.
 node -e "const p=require('./package.json'); console.log('Building Desktop App Version: v' + p.version);"
 echo.
 
-echo [1/4] Compiling and packaging Electron Windows App...
-call npx electron-builder --win dir
+echo [1/4] Compiling Standalone Portable EXE and Unpacked App...
+call npx electron-builder --win
 
 if %ERRORLEVEL% neq 0 (
   echo.
@@ -33,19 +33,22 @@ if exist "dist-electron\win-unpacked\resources\app.asar" (
 )
 
 echo.
-echo [3/4] Creating distribution zip (KOart-Platform-Windows.zip)...
-tar.exe -a -c -f "dist-electron\KOart-Platform-Windows.zip" -C "dist-electron\win-unpacked" .
-echo   Zip archive created successfully.
+echo [3/4] Copying Portable EXE to workspace root...
+if exist "dist-electron\KOart-Platform-Portable.exe" (
+  copy /y "dist-electron\KOart-Platform-Portable.exe" "..\..\KOart-Platform-Portable.exe" >nul
+  echo   Copied KOart-Platform-Portable.exe to root folder
+)
 
 echo.
 echo [4/4] Build completed successfully!
 echo ========================================================================
-echo   Executable Folder:  dist-electron\win-unpacked\KOart Platform.exe
-echo   Zip Package:        dist-electron\KOart-Platform-Windows.zip
-echo   Hot-Update Payload: updates\app.asar
+echo   PORTABLE EXE (Single File): dist-electron\KOart-Platform-Portable.exe
+echo   ROOT PORTABLE EXE:          KOart-Platform-Portable.exe
+echo   Executable Folder:          dist-electron\win-unpacked\KOart Platform.exe
+echo   Hot-Update Payload:         updates\app.asar
 echo ========================================================================
 echo.
 
-explorer "%~dp0dist-electron\win-unpacked"
+explorer "%~dp0dist-electron"
 
 pause
