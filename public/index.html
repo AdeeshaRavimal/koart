@@ -85,6 +85,12 @@
 
       <!-- Right: Action CTA, All-Companies Notification Bell, Theme & User Profile Menu -->
       <div class="nav-actions-right">
+        <!-- New Version Available Indicator Pill (Appears automatically when an update is found) -->
+        <button class="btn-update-available" id="btn-update-available" onclick="openHotUpdateModal()" style="display: none;" title="New software update available!">
+          <span>🚀</span>
+          <span id="nav-update-badge-text">Update Available</span>
+        </button>
+
         <button class="btn-notif-bell" onclick="openAllCompaniesNotificationModal()" id="btn-notif-radar"
           title="All-In-One Multi-Company Task & Schedule Notification Radar">
           <span>🔔</span>
@@ -122,6 +128,10 @@
             <div class="user-dropdown-actions">
               <button class="user-dropdown-item" onclick="openOnboardModal()">
                 <span>🏢</span> Register Business Workspace
+              </button>
+              <button class="user-dropdown-item" onclick="checkAppUpdate(true)"
+                title="Check for latest desktop software updates">
+                <span>🚀</span> Check for Updates
               </button>
               <button class="user-dropdown-item" onclick="openAuthModal('signin')">
                 <span>🔄</span> Switch Account / Sign In
@@ -2304,9 +2314,78 @@
   </div>
 
   <!-- =========================================================================
+       IN-APP PROFESSIONAL HOT-UPDATER MODAL
+       ========================================================================= -->
+  <div class="modal" id="modal-hot-update">
+    <div class="modal-content" style="max-width: 480px; text-align: center; border-radius: var(--radius-lg); padding: 30px 26px; box-shadow: 0 20px 45px rgba(0,0,0,0.5);">
+      <div style="width: 54px; height: 54px; border-radius: 50%; background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 26px;">
+        🚀
+      </div>
+      <h3 style="font-size: 19px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.3px;">Software Update Ready</h3>
+      <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 16px;">
+        A new version <strong id="hot-update-new-ver" style="color: #60a5fa;">v1.2.0</strong> is ready to install (current: <span id="hot-update-curr-ver" style="font-family: var(--font-mono);">v1.1.0</span>).
+      </p>
+
+      <!-- Release Notes Box -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; text-align: left; font-size: 12px; color: var(--text-muted); margin-bottom: 18px; max-height: 110px; overflow-y: auto;" id="hot-update-notes">
+        • Performance enhancements and real-time updates<br>
+        • Operational task workflow improvements
+      </div>
+
+      <!-- Download Progress Bar (Appears during download) -->
+      <div id="hot-update-progress-wrap" style="display: none; margin-bottom: 18px;">
+        <div style="display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 700; font-family: var(--font-mono); margin-bottom: 6px;">
+          <span id="hot-update-progress-status" style="color: #60a5fa;">Downloading update package...</span>
+          <span id="hot-update-progress-pct" style="color: #10b981;">0%</span>
+        </div>
+        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+          <div id="hot-update-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #10b981); transition: width 0.15s ease; border-radius: 999px;"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 10px; justify-content: center;" id="hot-update-actions">
+        <button type="button" class="btn-sm" id="btn-hot-update-cancel" onclick="closeModal('modal-hot-update')" style="padding: 10px 18px;">
+          Remind Me Later
+        </button>
+        <button type="button" class="btn-action-primary" id="btn-hot-update-now" onclick="triggerInAppUpdate()" style="padding: 10px 22px; font-weight: 700; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none;">
+          ⚡ Update Now (~660 KB)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .btn-update-available {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      border-radius: 999px;
+      color: #60a5fa;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      animation: pulseUpdate 2s infinite ease-in-out;
+      transition: all 0.2s ease;
+    }
+    .btn-update-available:hover {
+      background: rgba(37, 99, 235, 0.28);
+      border-color: #60a5fa;
+      transform: translateY(-1px);
+    }
+    @keyframes pulseUpdate {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(59, 130, 246, 0); }
+    }
+  </style>
+
+  <!-- =========================================================================
        FRONTEND CLIENT SCRIPT (API Integration, State & Reactivity)
        ========================================================================= -->
-  <script src="/js/platform-app.js?v=1.1.0"></script>
+  <script src="/js/platform-app.js?v=1.2.0"></script>
 </body>
 
 </html>

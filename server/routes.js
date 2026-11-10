@@ -216,6 +216,34 @@ async function handleApiRequest(req, res, url, body) {
     });
   }
 
+  // 0c. Desktop Hot-Update Hosting Endpoints
+  if (pathname === '/updates/version.json' || pathname === '/api/updates/check') {
+    let pkgVer = '1.1.0';
+    try { pkgVer = require('../package.json').version; } catch (e) {}
+    return jsonResponse(res, 200, {
+      version: pkgVer,
+      description: 'KOart Platform latest release'
+    });
+  }
+
+  if (pathname === '/updates/app.asar') {
+    const asarFile = path.resolve(__dirname, '../updates/app.asar');
+    const fallbackAsar = path.resolve(__dirname, '../dist-electron/win-unpacked/resources/app.asar');
+    const targetFile = fs.existsSync(asarFile) ? asarFile : (fs.existsSync(fallbackAsar) ? fallbackAsar : null);
+    if (!targetFile) {
+      return errorResponse(res, 404, 'Update package app.asar not found.');
+    }
+    const stat = fs.statSync(targetFile);
+    res.writeHead(200, {
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': stat.size,
+      'Content-Disposition': 'attachment; filename="app.asar"',
+      'Access-Control-Allow-Origin': '*'
+    });
+    const readStream = fs.createReadStream(targetFile);
+    return readStream.pipe(res);
+  }
+
   // 1. Verify Signed Bearer Token (or seamless local upgrade from active localhost session)
   const authHeader = req.headers['authorization'] || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';

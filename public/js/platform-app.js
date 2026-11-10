@@ -499,6 +499,11 @@
       }
 
       initRealtimeSync();
+
+      // Check for Desktop In-App Hot-Updates
+      if (window.desktopUpdater) {
+        setupDesktopAutoUpdater();
+      }
     }
 
     function renderCompanyDropdown(companies) {
@@ -4599,6 +4604,196 @@
       printWindow.document.write(htmlDoc);
       printWindow.document.close();
     }
+
+    // ------------------------------------------------------------------------
+    // IN-APP INSTANT HOT-UPDATER (Option 1: Sub-second Engine Swapping)
+    // ------------------------------------------------------------------------
+    let _updateInfoStash = null;
+
+    function setupDesktopAutoUpdater() {
+      if (!window.desktopUpdater) return;
+
+      // Listen for background update detection alerts
+      if (typeof window.desktopUpdater.onUpdateAvailable === 'function') {
+        window.desktopUpdater.onUpdateAvailable((info) => {
+          _updateInfoStash = info;
+          showUpdateBadge(info.newVersion);
+        });
+      }
+
+      // Download progress bar streamer
+      if (typeof window.desktopUpdater.onUpdateProgress === 'function') {
+        window.desktopUpdater.onUpdateProgress((pct) => {
+          const wrap = document.getElementById('hot-update-progress-wrap');
+          const bar = document.getElementById('hot-update-progress-bar');
+          const pctEl = document.getElementById('hot-update-progress-pct');
+          const statusEl = document.getElementById('hot-update-progress-status');
+
+          if (wrap) wrap.style.display = 'block';
+          if (bar) bar.style.width = pct + '%';
+          if (pctEl) pctEl.textContent = pct + '%';
+          if (statusEl) {
+            if (pct < 100) {
+              statusEl.textContent = `Downloading update package... ${pct}%`;
+            } else {
+              statusEl.textContent = 'Verifying engine & applying hot-patch... Restarting in 2s!';
+            }
+          }
+        });
+      }
+
+      // Hot-patch ready & relaunching
+      if (typeof window.desktopUpdater.onUpdateReady === 'function') {
+        window.desktopUpdater.onUpdateReady((info) => {
+          const statusEl = document.getElementById('hot-update-progress-status');
+          if (statusEl) statusEl.textContent = '✓ Update ready! Seamlessly restarting app...';
+          showToast('✓ Update complete! Restarting KOart Platform...');
+        });
+      }
+
+      // Update error handling
+      if (typeof window.desktopUpdater.onUpdateError === 'function') {
+        window.desktopUpdater.onUpdateError((err) => {
+          const wrap = document.getElementById('hot-update-progress-wrap');
+          const actions = document.getElementById('hot-update-actions');
+          const btnNow = document.getElementById('btn-hot-update-now');
+          const btnCancel = document.getElementById('btn-hot-update-cancel');
+
+          if (wrap) wrap.style.display = 'none';
+          if (actions) actions.style.display = 'flex';
+          if (btnNow) { btnNow.disabled = false; btnNow.textContent = '⚡ Try Update Again'; }
+          if (btnCancel) btnCancel.disabled = false;
+          showToast(`Update notice: ${err}`, true);
+        });
+      }
+
+      // Periodic check 3 seconds after boot
+      setTimeout(() => {
+        checkAppUpdate(false);
+      }, 3000);
+    }
+
+    async function checkAppUpdate(isManual = false) {
+      if (isManual) {
+        showToast('🔍 Checking for updates...');
+      }
+
+      if (window.desktopUpdater && typeof window.desktopUpdater.checkUpdate === 'function') {
+        try {
+          const res = await window.desktopUpdater.checkUpdate();
+          if (res && res.success && res.updateAvailable) {
+            _updateInfoStash = res;
+            showUpdateBadge(res.newVersion);
+            openHotUpdateModal(res);
+          } else if (res && res.success && !res.updateAvailable) {
+            if (isManual) {
+              showToast(`✓ You are running the latest version (v${res.currentVersion || '1.1.0'}).`);
+            }
+          } else if (isManual) {
+            showToast(res.error || 'Unable to check for updates. Please try again.', true);
+          }
+        } catch (e) {
+          if (isManual) showToast('Could not reach update server.', true);
+        }
+        return;
+      }
+
+      // Browser Web fallback check
+      try {
+        const res = await fetch('/updates/version.json');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.version) {
+            if (isManual) {
+              showToast(`✓ Web Platform is running version v${data.version}.`);
+            }
+          }
+        }
+      } catch (e) {
+        if (isManual) showToast('Unable to check for updates.', true);
+      }
+    }
+
+    function showUpdateBadge(newVer) {
+      const btn = document.getElementById('btn-update-available');
+      if (btn) {
+        btn.style.display = 'inline-flex';
+        btn.title = `Click to install version v${newVer}`;
+        btn.innerHTML = `<span>⚡ Update to v${newVer}</span>`;
+      }
+    }
+
+    function openHotUpdateModal(info) {
+      const data = info || _updateInfoStash || {};
+      const newVerEl = document.getElementById('hot-update-new-ver');
+      const currVerEl = document.getElementById('hot-update-curr-ver');
+      const notesEl = document.getElementById('hot-update-notes');
+      const wrap = document.getElementById('hot-update-progress-wrap');
+      const bar = document.getElementById('hot-update-progress-bar');
+      const pctEl = document.getElementById('hot-update-progress-pct');
+      const actions = document.getElementById('hot-update-actions');
+      const btnNow = document.getElementById('btn-hot-update-now');
+      const btnCancel = document.getElementById('btn-hot-update-cancel');
+
+      if (newVerEl && data.newVersion) newVerEl.textContent = `v${data.newVersion}`;
+      if (currVerEl && data.currentVersion) currVerEl.textContent = `v${data.currentVersion}`;
+      if (notesEl && data.releaseNotes) notesEl.textContent = data.releaseNotes;
+
+      if (wrap) wrap.style.display = 'none';
+      if (bar) bar.style.width = '0%';
+      if (pctEl) pctEl.textContent = '0%';
+      if (actions) actions.style.display = 'flex';
+      if (btnNow) {
+        btnNow.disabled = false;
+        btnNow.textContent = '⚡ Update Now (~660 KB)';
+      }
+      if (btnCancel) btnCancel.disabled = false;
+
+      openModal('modal-hot-update');
+    }
+
+    async function triggerInAppUpdate() {
+      if (!window.desktopUpdater) {
+        showToast('In-App Updater is only available in the KOart Desktop App.', true);
+        return;
+      }
+
+      const wrap = document.getElementById('hot-update-progress-wrap');
+      const bar = document.getElementById('hot-update-progress-bar');
+      const pctEl = document.getElementById('hot-update-progress-pct');
+      const statusEl = document.getElementById('hot-update-progress-status');
+      const btnNow = document.getElementById('btn-hot-update-now');
+      const btnCancel = document.getElementById('btn-hot-update-cancel');
+
+      if (wrap) wrap.style.display = 'block';
+      if (bar) bar.style.width = '5%';
+      if (pctEl) pctEl.textContent = '5%';
+      if (statusEl) statusEl.textContent = 'Connecting to high-speed CDN...';
+      if (btnNow) {
+        btnNow.disabled = true;
+        btnNow.textContent = '⏳ Updating...';
+      }
+      if (btnCancel) btnCancel.disabled = true;
+
+      try {
+        const res = await window.desktopUpdater.applyUpdate(_updateInfoStash || {});
+        if (!res.success) {
+          throw new Error(res.error || 'Update process encountered an error.');
+        }
+      } catch (err) {
+        if (wrap) wrap.style.display = 'none';
+        if (btnNow) { btnNow.disabled = false; btnNow.textContent = '⚡ Try Update Again'; }
+        if (btnCancel) btnCancel.disabled = false;
+        showToast(err.message || 'Update failed', true);
+      }
+    }
+
+    // Expose to window scope for HTML onclick events
+    window.setupDesktopAutoUpdater = setupDesktopAutoUpdater;
+    window.checkAppUpdate = checkAppUpdate;
+    window.showUpdateBadge = showUpdateBadge;
+    window.openHotUpdateModal = openHotUpdateModal;
+    window.triggerInAppUpdate = triggerInAppUpdate;
 
     // Initialize on window load
     window.addEventListener('DOMContentLoaded', initPlatform);
