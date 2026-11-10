@@ -40,10 +40,19 @@
         ],
         "win": {
             "target": [
+                "nsis",
                 "portable",
                 "dir"
             ],
             "signAndEditExecutable": false
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "KOart Platform",
+            "artifactName": "KOart-Platform-Setup.exe"
         },
         "portable": {
             "artifactName": "KOart-Platform-Portable.exe"

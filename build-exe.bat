@@ -33,7 +33,11 @@ if exist "dist-electron\win-unpacked\resources\app.asar" (
 )
 
 echo.
-echo [3/4] Copying Portable EXE to workspace root...
+echo [3/4] Copying Setup Installer and Portable EXE to workspace root...
+if exist "dist-electron\KOart-Platform-Setup.exe" (
+  copy /y "dist-electron\KOart-Platform-Setup.exe" "..\..\KOart-Platform-Setup.exe" >nul
+  echo   Copied KOart-Platform-Setup.exe to root folder
+)
 if exist "dist-electron\KOart-Platform-Portable.exe" (
   copy /y "dist-electron\KOart-Platform-Portable.exe" "..\..\KOart-Platform-Portable.exe" >nul
   echo   Copied KOart-Platform-Portable.exe to root folder
@@ -42,6 +46,8 @@ if exist "dist-electron\KOart-Platform-Portable.exe" (
 echo.
 echo [4/4] Build completed successfully!
 echo ========================================================================
+echo   SETUP INSTALLER (Wizard):   dist-electron\KOart-Platform-Setup.exe
+echo   ROOT SETUP INSTALLER:       KOart-Platform-Setup.exe
 echo   PORTABLE EXE (Single File): dist-electron\KOart-Platform-Portable.exe
 echo   ROOT PORTABLE EXE:          KOart-Platform-Portable.exe
 echo   Executable Folder:          dist-electron\win-unpacked\KOart Platform.exe

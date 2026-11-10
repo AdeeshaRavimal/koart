@@ -30,7 +30,7 @@ function getActiveVersion() {
       const p = JSON.parse(fs.readFileSync(enginePkg, 'utf8'));
       if (p && p.version) return p.version;
     }
-  } catch (e) {}
+  } catch (e) { }
   return pkg.version || '1.2.0';
 }
 
@@ -107,7 +107,7 @@ function downloadFileWithProgress(sourceUrl, destPath, onProgress) {
         });
 
         fileStream.on('error', (err) => {
-          try { fs.unlinkSync(destPath); } catch (e) {}
+          try { fs.unlinkSync(destPath); } catch (e) { }
           reject(err);
         });
       }).on('error', reject);
@@ -170,7 +170,7 @@ ipcMain.handle('apply-update', async (event, updateInfo) => {
     fs.mkdirSync(engineDir, { recursive: true });
     try {
       fs.copyFileSync(tempAsarPath, path.join(engineDir, 'app.asar'));
-    } catch (e) {}
+    } catch (e) { }
 
     const exePath = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
 
@@ -252,7 +252,7 @@ function checkForRemoteUpdates(win) {
           });
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }, 3500);
 }
 
@@ -318,7 +318,7 @@ function startApp() {
       checkForRemoteUpdates(win);
     });
   });
-  app.on('before-quit', () => { try { server.close(); } catch (e) {} });
+  app.on('before-quit', () => { try { server.close(); } catch (e) { } });
 }
 
 const gotLock = app.requestSingleInstanceLock();
