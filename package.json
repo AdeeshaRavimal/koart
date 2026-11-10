@@ -1,6 +1,6 @@
 {
     "name": "koart-operational-platform",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "Multi-Tenant Operational & Task Management SaaS Platform for KOart Solutions",
     "main": "electron/main.js",
     "type": "commonjs",
